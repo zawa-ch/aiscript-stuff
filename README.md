@@ -41,3 +41,10 @@ Misskeyでサーバー上の時刻を表示するAiScript App。
 場所: `play-poker_challenge.is`
 
 テキストを入力してポーカーゲームを行うMisskey Play。
+
+### フォント10連ガチャ
+
+場所: `play-fontrole.is`
+
+フォントの10連ガチャを行うMisskey Play。
+[同名の診断メーカー](https://shindanmaker.com/771833)のAiScript移植版。
