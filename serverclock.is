@@ -3,7 +3,7 @@
 	name: 'ServerClock'
 	author: 'zawa-ch.'
 	description: 'サーバー上の時刻を表示できるデジタル時計'
-	version: '1.0.0'
+	version: '1.0.1'
 }
 //	設定項目
 let CONFIG = {
@@ -30,7 +30,7 @@ let CONFIG = {
 	//	poll_interval: num
 	//	時間差を計算するためのポーリングの間隔を指定する
 	//	単位はミリ秒
-	poll_interval: 300000,
+	poll_interval: 60000,
 }
 
 let WEEKNAME = [ 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT' ]
@@ -80,8 +80,11 @@ var servertime_error = 0
 		font: 'monospace' })
 }
 
-@on_poll() {
-	let N = 5
+var timesync_data = []
+@on_timesync() {
+	let HISTORY_MAX = 12
+	let HISTORY_MIN = 5
+	let AVG_COUNT = 3
 	@poll() {
 		let l1 = Date:now()
 		let s = Mk:api('ping', {})
@@ -90,12 +93,16 @@ var servertime_error = 0
 		let localtime = Math:floor(l1 / 2 + l2 / 2)
 		{ diff: servertime - localtime, error: Math:floor((l2 - l1) / 2) }
 	}
-	var data = []
-	for N { data.push(poll()) }
-	data = data.reduce(@(a,i,n){ if Core:type(a) != 'null' { if i.error < a.error { i } else { a } } else { i } }, null)
-	servertime_diff = Math:round(data.diff)
-	servertime_error = Math:round(data.error)
+	loop {
+		timesync_data.push(poll())
+		timesync_data.slice(timesync_data.len - HISTORY_MAX, timesync_data.len)
+		if timesync_data.len >= HISTORY_MIN { break }
+	}
+	let d = timesync_data.sort(@(l, r){ if l.error == r.error { 0 } elif l.error > r.error { 1 } else { -1 } }).slice(0, AVG_COUNT)
+	let r = d.reduce(@(a,i,n){ { diff: a.diff + i.diff, error: a.error + i.error } }, { diff: 0, error: 0 })
+	servertime_diff = Math:round(r.diff / d.len)
+	servertime_error = Math:round(r.error / d.len)
 }
 
 Async:interval(CONFIG.update_interval, on_update, true)
-Async:interval(CONFIG.poll_interval, on_poll, true)
+Async:interval(CONFIG.poll_interval, on_timesync, true)
