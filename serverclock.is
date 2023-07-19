@@ -1,0 +1,108 @@
+/// @0.13.3
+### {
+	name: 'ServerClock'
+	author: 'zawa-ch.'
+	description: 'サーバー上の時刻を表示できるデジタル時計'
+	version: '1.0.1'
+}
+//	設定項目
+let CONFIG = {
+	//	update_interval: num
+	//	時計の表示の更新間隔を設定する
+	//	単位はミリ秒
+	update_interval: 64,
+	//	textsize: num
+	//	時計の文字の大きさを指定する
+	textsize: 1.2,
+	//	display: obj
+	//	表示する項目を指定する
+	display: {
+		//	date: bool
+		//	日付を表示する
+		date: true,
+		//	localclock: bool
+		//	ローカルでの時刻を表示する
+		localclock: false,
+		//	difference: bool
+		//	ローカルとの時間差を表示する
+		difference: false,
+	},
+	//	poll_interval: num
+	//	時間差を計算するためのポーリングの間隔を指定する
+	//	単位はミリ秒
+	poll_interval: 60000,
+}
+
+let WEEKNAME = [ 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT' ]
+
+@day_of_week(date) {
+	let LOCALTIME_DIFF = Date:parse( `{Date:year(date)}/{Date:month(date)}/{Date:day(date)} 0:00 UTC`) - Date:parse(`{Date:year(date)}/{Date:month(date)}/{Date:day(date)} 0:00` )
+	let local_date = date + LOCALTIME_DIFF
+	Math:floor(local_date / 86400000 + 4) % 7
+}
+@datestr(date) {
+	var dy = `000{Date:year(date)}`
+	dy = dy.slice(dy.len - 4, dy.len)
+	var dm = `0{Date:month(date)}`
+	dm = dm.slice(dm.len - 2, dm.len)
+	var dd = `0{Date:day(date)}`
+	dd = dd.slice(dd.len - 2, dd.len)
+	`{dy}-{dm}-{dd}`
+}
+@timestr(date) {
+	var th = `0{Date:hour(date)}`
+	th = th.slice(th.len - 2, th.len)
+	var tm = `0{Date:minute(date)}`
+	tm = tm.slice(tm.len - 2, tm.len)
+	var ts = `0{Date:second(date)}`
+	ts = ts.slice(ts.len - 2, ts.len)
+	var ms = `00{date % 1000}`
+	ms = ms.slice(ms.len - 3, ms.len)
+	`{th}:{tm}:{ts}.{ms}`
+}
+
+Ui:render([ Ui:C:mfm({ size: CONFIG.textsize, font: 'monospace' }, 'textarea') ])
+
+var servertime_diff = 0
+var servertime_error = 0
+
+@on_update() {
+	let lt = Date:now()
+	let st = lt + servertime_diff
+	var text = []
+	if CONFIG.display.date { text.push(`{datestr(st)} {WEEKNAME[day_of_week(st)]}`) }
+	text.push(`$[scale.x=1.3,y=1.3 {timestr(st)}]`)
+	if CONFIG.display.localclock { text.push(`<small>Local: {timestr(lt)}</small>`) }
+	if CONFIG.display.difference { text.push(`<small>{servertime_diff}±{servertime_error} ms</small>`) }
+	Ui:get('textarea').update({
+		text: `<center>{text.join(Str:lf)}</center>`,
+		size: CONFIG.textsize,
+		font: 'monospace' })
+}
+
+var timesync_data = []
+@on_timesync() {
+	let HISTORY_MAX = 12
+	let HISTORY_MIN = 5
+	let AVG_COUNT = 3
+	@poll() {
+		let l1 = Date:now()
+		let s = Mk:api('ping', {})
+		let l2 = Date:now()
+		let servertime = s.pong
+		let localtime = Math:floor(l1 / 2 + l2 / 2)
+		{ diff: servertime - localtime, error: Math:floor((l2 - l1) / 2) }
+	}
+	loop {
+		timesync_data.push(poll())
+		timesync_data.slice(timesync_data.len - HISTORY_MAX, timesync_data.len)
+		if timesync_data.len >= HISTORY_MIN { break }
+	}
+	let d = timesync_data.sort(@(l, r){ if l.error == r.error { 0 } elif l.error > r.error { 1 } else { -1 } }).slice(0, AVG_COUNT)
+	let r = d.reduce(@(a,i,n){ { diff: a.diff + i.diff, error: a.error + i.error } }, { diff: 0, error: 0 })
+	servertime_diff = Math:round(r.diff / d.len)
+	servertime_error = Math:round(r.error / d.len)
+}
+
+Async:interval(CONFIG.update_interval, on_update, true)
+Async:interval(CONFIG.poll_interval, on_timesync, true)
