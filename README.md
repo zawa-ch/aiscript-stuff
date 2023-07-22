@@ -11,3 +11,9 @@
 場所: `serverclock.is`
 
 Misskeyでサーバー上の時刻を表示するAiScript App。
+
+### ポーカーチャレンジ
+
+場所: `play-poker_challenge.is`
+
+テキストを入力してポーカーゲームを行うMisskey Play。
