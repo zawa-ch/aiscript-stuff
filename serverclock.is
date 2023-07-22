@@ -56,7 +56,7 @@ let WEEKNAME = [ 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT' ]
 	tm = tm.slice(tm.len - 2, tm.len)
 	var ts = `0{Date:second(date)}`
 	ts = ts.slice(ts.len - 2, ts.len)
-	var ms = `00{date % 1000}`
+	var ms = `00{date%1000}`
 	ms = ms.slice(ms.len - 3, ms.len)
 	`{th}:{tm}:{ts}.{ms}`
 }
