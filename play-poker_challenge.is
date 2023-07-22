@@ -1,0 +1,161 @@
+### {
+	name: "ポーカーチャレンジ"
+	author: "zawa-ch."
+	version: "1.0.0"
+	description: "テキストを入力してドロー！内容は日替わりです"
+	license: {
+		name: "MIT License"
+		href: "http://www.opensource.org/licenses/mit-license.php"
+	}
+}
+
+@Poker() {
+	let SUITS = {
+		spade: { rank: 0, name: 'spade', symbol: '♠', color: null },
+		heart: { rank: 1, name: 'heart', symbol: '♥', color: 'e11' },
+		diamond: { rank: 2, name: 'diamond', symbol: '♦', color: 'e11' },
+		club: { rank: 3, name: 'club', symbol: '♣', color: null },
+	}
+	@Card(suits, rank, card) {
+		@to_mfm() {
+			[
+				if Core:type(suits.color) == 'str' { `$[fg.color={suits.color} ` } else { '' }
+				card
+				if Core:type(suits.color) == 'str' { ']' } else { '' }
+			].join()
+		}
+		{ suits: suits, rank: rank, card: card, to_mfm: to_mfm }
+	}
+	@card_comp(l, r) { if l.rank == r.rank { if l.suits.rank == r.suits.rank { 0 } elif l.suits.rank > r.suits.rank { 1 } else { -1 } } elif l.rank > r.rank { 1 } else { -1 } }
+	let DECK_BASE = [
+		Card(SUITS.spade, 0, '🂡'), Card(SUITS.heart, 0, '🂱'), Card(SUITS.diamond, 0, '🃁'), Card(SUITS.club, 0, '🃑'),
+		Card(SUITS.spade, 1, '🂮'), Card(SUITS.heart, 1, '🂾'), Card(SUITS.diamond, 1, '🃎'), Card(SUITS.club, 1, '🃞'),
+		Card(SUITS.spade, 2, '🂭'), Card(SUITS.heart, 2, '🂽'), Card(SUITS.diamond, 2, '🃍'), Card(SUITS.club, 2, '🃝'),
+		Card(SUITS.spade, 3, '🂫'), Card(SUITS.heart, 3, '🂻'), Card(SUITS.diamond, 3, '🃋'), Card(SUITS.club, 3, '🃛'),
+		Card(SUITS.spade, 4, '🂪'), Card(SUITS.heart, 4, '🂺'), Card(SUITS.diamond, 4, '🃊'), Card(SUITS.club, 4, '🃚'),
+		Card(SUITS.spade, 5, '🂩'), Card(SUITS.heart, 5, '🂹'), Card(SUITS.diamond, 5, '🃉'), Card(SUITS.club, 5, '🃙'),
+		Card(SUITS.spade, 6, '🂨'), Card(SUITS.heart, 6, '🂸'), Card(SUITS.diamond, 6, '🃈'), Card(SUITS.club, 6, '🃘'),
+		Card(SUITS.spade, 7, '🂧'), Card(SUITS.heart, 7, '🂷'), Card(SUITS.diamond, 7, '🃇'), Card(SUITS.club, 7, '🃗'),
+		Card(SUITS.spade, 8, '🂦'), Card(SUITS.heart, 8, '🂶'), Card(SUITS.diamond, 8, '🃆'), Card(SUITS.club, 8, '🃖'),
+		Card(SUITS.spade, 9, '🂥'), Card(SUITS.heart, 9, '🂵'), Card(SUITS.diamond, 9, '🃅'), Card(SUITS.club, 9, '🃕'),
+		Card(SUITS.spade, 10, '🂤'), Card(SUITS.heart, 10, '🂴'), Card(SUITS.diamond, 10, '🃄'), Card(SUITS.club, 10, '🃔'),
+		Card(SUITS.spade, 11, '🂣'), Card(SUITS.heart, 11, '🂳'), Card(SUITS.diamond, 11, '🃃'), Card(SUITS.club, 11, '🃓'),
+		Card(SUITS.spade, 12, '🂢'), Card(SUITS.heart, 12, '🂲'), Card(SUITS.diamond, 12, '🃂'), Card(SUITS.club, 12, '🃒'),
+	]
+	@is_flush(cardarr) { cardarr.reduce(@(a,i,n){ if Core:type(a) != 'null' { { suits: a.suits, result: a.result && ( a.suits.rank == i.suits.rank ) } } else { { suits: i.suits, result: true } } }, null).result }
+	@is_straight(cardarr) { cardarr.sort(card_comp).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: i.rank, result: a.result && (( (a.rank + 1) == i.rank ) || ( a.rank == 0 && i.rank == 9 )) } } else { { rank: i.rank, result: true } } }, null).result }
+	@is_royalstraight(cardarr) { cardarr.sort(card_comp).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: a.rank + 1, result: a.result && ( (a.rank + 1) == i.rank ) } } else { { rank: 0, result: i.rank == 0 } } }, null).result }
+	@aggregate_pairs(cardarr) {
+		cardarr.reduce(@(a,i,n){
+			let f = a.find(@(ai,an){ ai.rank == i.rank })
+			if Core:type(f) != 'null' { f.cards.push(i) } else { a.push({ rank: i.rank, cards: [i] }) }
+			a
+		}, [])
+	}
+	let HAND_ROLES = [
+		{ rank: 0, name: 'royal straight flush', check: @(cardarr) { is_flush(cardarr) && is_royalstraight(cardarr) } }
+		{ rank: 1, name: 'straight flush', check: @(cardarr) { is_flush(cardarr) && is_straight(cardarr) } }
+		{ rank: 2, name: 'four of a kind', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 4 }).len >= 1 } }
+		{ rank: 3, name: 'full house', check: @(cardarr) { (aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len == 3 }).len >= 1) && (aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len == 2 }).len >= 1) } }
+		{ rank: 4, name: 'flush', check: @(cardarr) { is_flush(cardarr) } }
+		{ rank: 5, name: 'straight', check: @(cardarr) { is_straight(cardarr) } }
+		{ rank: 6, name: 'three of a kind', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 3 }).len >= 1 } }
+		{ rank: 7, name: 'two pair', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 2 }).len >= 2 } }
+		{ rank: 8, name: 'one pair', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 2 }).len >= 1 } }
+		{ rank: 9, name: 'high card', check: @(cardarr) { true } }
+	]
+	@CardBundle(cardarr) {
+		var data = if Core:type(cardarr) == 'arr' { cardarr.copy() } else { [] }
+
+		@add(card) {
+			data.push(card)
+		}
+		@remove(index) {
+			data = data.sort(card_comp)
+			let r = data[index]
+			data = data.filter(@(i,n){ n != index })
+			r
+		}
+		{ cards: @() { data.sort(card_comp) }, count: @(){ data.len }, add: add, remove: remove }
+	}
+	@Hands(table) {
+		var hand = CardBundle(null)
+		for 5 { hand.add(table.pick_card()) }
+		@to_role() {
+			var r = HAND_ROLES.copy()
+			r = r.filter(@(i,n){ i.check(hand.cards()) })
+			if r.len > 0 { r[0] } else { null }
+		}
+		@to_string() {
+			hand.cards().map(@(i,n){ i.card }).join()
+		}
+		@to_mfm() {
+			hand.cards().map(@(i,n){ i.to_mfm() }).join()
+		}
+		{ cards: @(){ hand }, to_role: to_role, to_string: to_string, to_mfm: to_mfm }
+	}
+	@Table(seed) {
+		var deck = CardBundle(DECK_BASE)
+		let rand = Math:gen_rng(seed)
+		@pick_card() {
+			let i = rand(0, deck.count())
+			deck.remove(i)
+		}
+		{ deck: @(){ deck }, pick_card: pick_card }
+	}
+
+	{ create_table: @(seed) { Table(seed) }, create_hand: @(table) { Hands(table) } }
+}
+
+let HASHTAG = '#ポーカーチャレンジ'
+
+let seed = USER_USERNAME
+let seedinput = Ui:C:textInput({
+	onInput: @(text) {
+		seed = text
+		drawbutton.update(if text.len > 0 { { disabled: false } } else { { disabled: true } })
+	}
+	default: USER_USERNAME
+	label: 'シード値'
+	caption: `山札をシャッフルするときの乱数のシードを入力します。`
+}, 'seedinput')
+let drawbutton = Ui:C:button({
+	text: 'ドロー！'
+	onClick: @(){
+		if seed.len <= 0 { return Mk:dialog('Assertion error', 'assertion seed.len > 0 not satisfiable', 'error') }
+		drawbutton.update({ disabled: true })
+		let hand = game.create_hand(game.create_table(`{Date:year()}:{Date:month()}:{Date:day()}:{seed}`))
+		let result = [
+			`<center>$[tada.speed=0s {hand.to_mfm()}]`
+			`$[font.serif {hand.to_role().name.upper()}]</center>`
+			''
+			`{THIS_URL} {HASHTAG}`
+		].join(Str:lf)
+		resulttext.update({ text: result })
+		postformbutton.update({ form: { text: result } })
+		resultarea.update({ hidden: false })
+		drawbutton.update({ disabled: false })
+	}
+	primary: false
+	disabled: false
+}, 'drawbutton')
+let preparearea = Ui:C:container({
+	children: [ seedinput, drawbutton ]
+}, 'preparearea')
+let resulttext = Ui:C:mfm({ text: '' }, 'resulttext')
+let postformbutton = Ui:C:postFormButton({
+	text: "投稿！"
+	primary: true
+	form: { text: '' }
+}, 'postformbutton')
+let resultarea = Ui:C:container({
+	children: [ Ui:C:text({ text: '結果', size: 1.2 }), resulttext, postformbutton ]
+	hidden: true
+}, 'resultarea')
+
+let game = Poker()
+
+@on_load() {
+	Ui:render([ preparearea, resultarea ])
+}
+on_load()
