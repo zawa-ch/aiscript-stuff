@@ -3,7 +3,7 @@
 	name: 'ServerClock'
 	author: 'zawa-ch.'
 	description: 'サーバー上の時刻を表示できるデジタル時計'
-	version: '1.0.1'
+	version: '1.0.2'
 }
 //	設定項目
 let CONFIG = {
@@ -56,52 +56,58 @@ let WEEKNAME = [ 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT' ]
 	tm = tm.slice(tm.len - 2, tm.len)
 	var ts = `0{Date:second(date)}`
 	ts = ts.slice(ts.len - 2, ts.len)
-	var ms = `00{date % 1000}`
+	var ms = `00{date%1000}`
 	ms = ms.slice(ms.len - 3, ms.len)
 	`{th}:{tm}:{ts}.{ms}`
 }
 
-Ui:render([ Ui:C:mfm({ size: CONFIG.textsize, font: 'monospace' }, 'textarea') ])
-
-var servertime_diff = 0
-var servertime_error = 0
-
-@on_update() {
-	let lt = Date:now()
-	let st = lt + servertime_diff
-	var text = []
-	if CONFIG.display.date { text.push(`{datestr(st)} {WEEKNAME[day_of_week(st)]}`) }
-	text.push(`$[scale.x=1.3,y=1.3 {timestr(st)}]`)
-	if CONFIG.display.localclock { text.push(`<small>Local: {timestr(lt)}</small>`) }
-	if CONFIG.display.difference { text.push(`<small>{servertime_diff}±{servertime_error} ms</small>`) }
-	Ui:get('textarea').update({
-		text: `<center>{text.join(Str:lf)}</center>`,
-		size: CONFIG.textsize,
-		font: 'monospace' })
-}
-
-var timesync_data = []
-@on_timesync() {
-	let HISTORY_MAX = 12
-	let HISTORY_MIN = 5
-	let AVG_COUNT = 3
+@ServerTimeSync(hist_max, hist_min, avg_count) {
+	var difference = null
+	var data = []
 	@poll() {
 		let l1 = Date:now()
 		let s = Mk:api('ping', {})
 		let l2 = Date:now()
 		let servertime = s.pong
 		let localtime = Math:floor(l1 / 2 + l2 / 2)
-		{ diff: servertime - localtime, error: Math:floor((l2 - l1) / 2) }
+		{ value: servertime - localtime, error: Math:floor((l2 - l1) / 2) }
 	}
-	loop {
-		timesync_data.push(poll())
-		timesync_data.slice(timesync_data.len - HISTORY_MAX, timesync_data.len)
-		if timesync_data.len >= HISTORY_MIN { break }
+	@sync() {
+		loop {
+			data.push(poll())
+			if data.len > hist_max { data.shift() }
+			if (data.len >= hist_min) && (data.len <= hist_max) { break }
+		}
+		let d = data.sort(@(l, r){ l.error - r.error }).slice(0, avg_count)
+		let sum = d.reduce(@(a,i,n){ { value: a.value + i.value, error: a.error + i.error } }, { value: 0, error: 0 })
+		difference = { value: Math:round(sum.value / d.len), error: Math:round(sum.error / d.len) }
 	}
-	let d = timesync_data.sort(@(l, r){ if l.error == r.error { 0 } elif l.error > r.error { 1 } else { -1 } }).slice(0, AVG_COUNT)
-	let r = d.reduce(@(a,i,n){ { diff: a.diff + i.diff, error: a.error + i.error } }, { diff: 0, error: 0 })
-	servertime_diff = Math:round(r.diff / d.len)
-	servertime_error = Math:round(r.error / d.len)
+	@convert(date) { date + difference.value }
+	@current_time() { convert(Date:now()) }
+	{ difference: @(){difference}, sync: sync, convert: convert, current_time: current_time }
+}
+
+let stime = ServerTimeSync(12, 5, 3)
+
+Ui:render([ Ui:C:mfm({ size: CONFIG.textsize, font: 'monospace' }, 'textarea') ])
+
+@on_update() {
+	let lt = Date:now()
+	let diff = stime.difference()
+	let st = if Core:type(diff) == 'obj' { lt + stime.difference().value } else { null }
+	var text = []
+	if CONFIG.display.date { text.push(if Core:type(st) == 'num' { `{datestr(st)} {WEEKNAME[day_of_week(st)]}` } else { '____-__-__ ___' }) }
+	text.push(if Core:type(st) == 'num' { `$[scale.x=1.3,y=1.3 {timestr(st)}]` } else { '$[scale.x=1.3,y=1.3 __:__:__.___]' })
+	if CONFIG.display.localclock { text.push(`<small>Local: {timestr(lt)}</small>`) }
+	if CONFIG.display.difference { text.push(if Core:type(diff) == 'obj' { `<small>{diff.value}±{diff.error} ms</small>` } else { `<small>no data</small>` }) }
+	Ui:get('textarea').update({
+		text: `<center>{text.join(Str:lf)}</center>`,
+		size: CONFIG.textsize,
+		font: 'monospace' })
+}
+
+@on_timesync() {
+	stime.sync()
 }
 
 Async:interval(CONFIG.update_interval, on_update, true)
