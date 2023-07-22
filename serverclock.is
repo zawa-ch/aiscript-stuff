@@ -93,13 +93,13 @@ Ui:render([ Ui:C:mfm({ size: CONFIG.textsize, font: 'monospace' }, 'textarea') ]
 
 @on_update() {
 	let lt = Date:now()
-	let diff = if Core:type(stime.difference()) == 'obj' { stime.difference() } else { { value: 0, error: 0} }
-	let st = lt + diff.value
+	let diff = stime.difference()
+	let st = if Core:type(diff) == 'obj' { lt + stime.difference().value } else { null }
 	var text = []
-	if CONFIG.display.date { text.push(`{datestr(st)} {WEEKNAME[day_of_week(st)]}`) }
-	text.push(`$[scale.x=1.3,y=1.3 {timestr(st)}]`)
+	if CONFIG.display.date { text.push(if Core:type(st) == 'num' { `{datestr(st)} {WEEKNAME[day_of_week(st)]}` } else { '____-__-__ ___' }) }
+	text.push(if Core:type(st) == 'num' { `$[scale.x=1.3,y=1.3 {timestr(st)}]` } else { '$[scale.x=1.3,y=1.3 __:__:__.___]' })
 	if CONFIG.display.localclock { text.push(`<small>Local: {timestr(lt)}</small>`) }
-	if CONFIG.display.difference { text.push(`<small>{diff.value}±{diff.error} ms</small>`) }
+	if CONFIG.display.difference { text.push(if Core:type(diff) == 'obj' { `<small>{diff.value}±{diff.error} ms</small>` } else { `<small>no data</small>` }) }
 	Ui:get('textarea').update({
 		text: `<center>{text.join(Str:lf)}</center>`,
 		size: CONFIG.textsize,
