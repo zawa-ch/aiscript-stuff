@@ -78,7 +78,7 @@ let WEEKNAME = [ 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT' ]
 			if data.len > hist_max { data.shift() }
 			if (data.len >= hist_min) && (data.len <= hist_max) { break }
 		}
-		let d = data.sort(@(l, r){ l.error - r.error }).slice(0, avg_count)
+		let d = data.copy().sort(@(l, r){ l.error - r.error }).slice(0, avg_count)
 		let sum = d.reduce(@(a,i,n){ { value: a.value + i.value, error: a.error + i.error } }, { value: 0, error: 0 })
 		difference = { value: Math:round(sum.value / d.len), error: Math:round(sum.error / d.len) }
 	}
