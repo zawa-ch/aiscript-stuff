@@ -68,13 +68,17 @@ let WEEKNAME = [ 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT' ]
 		let l1 = Date:now()
 		let s = Mk:api('ping', {})
 		let l2 = Date:now()
+		if Core:type(s) != 'obj' { return null }
+		if Core:type(s.pong) != 'num' { return null }
 		let servertime = s.pong
 		let localtime = Math:floor(l1 / 2 + l2 / 2)
 		{ value: servertime - localtime, error: Math:floor((l2 - l1) / 2) }
 	}
 	@sync() {
 		loop {
-			data.push(poll())
+			let p = poll()
+			if Core:type(p) == 'null' { return null }
+			data.push(p)
 			if data.len > hist_max { data.shift() }
 			if (data.len >= hist_min) && (data.len <= hist_max) { break }
 		}
