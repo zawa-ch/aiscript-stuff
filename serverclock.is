@@ -3,7 +3,7 @@
 	name: 'ServerClock'
 	author: 'zawa-ch.'
 	description: 'サーバー上の時刻を表示できるデジタル時計'
-	version: '1.0.3'
+	version: '1.0.4'
 }
 //	設定項目
 let CONFIG = {
