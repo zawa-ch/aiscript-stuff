@@ -109,12 +109,12 @@
 
 let HASHTAG = '#ポーカーチャレンジ'
 
-let seed = USER_USERNAME
+let seed = ''
 let seedinput = Ui:C:textInput({
 	onInput: @(text) {
 		seed = text
 	}
-	default: USER_USERNAME
+	default: ''
 	label: 'シード値'
 	caption: `山札をシャッフルするときの乱数のシードを入力します。`
 }, 'seedinput')
