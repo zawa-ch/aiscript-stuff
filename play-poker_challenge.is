@@ -131,7 +131,7 @@ let drawbutton = Ui:C:button({
 		seed_v = if seed.len > 0 { seed } else { Util:uuid() }
 		let hand = game.create_hand(game.create_table(`{Date:year()}:{Date:month()}:{Date:day()}:{seed_v}`))
 		let result = [
-			`<center>$[tada.speed=0s $[tada.speed=0s $[tada.speed=0s $[tada.speed=0s {hand.to_mfm()}]]]]`
+			`<center>$[x3 {hand.to_mfm()}]`
 			`$[font.serif {hand.to_role().name.upper()}]</center>`
 			''
 			`{THIS_URL} {HASHTAG}`
