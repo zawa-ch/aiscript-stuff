@@ -1,7 +1,7 @@
 ### {
 	name: "ポーカーチャレンジ"
 	author: "zawa-ch."
-	version: "1.0.0"
+	version: "1.0.1"
 	description: "テキストを入力してドロー！内容は日替わりです"
 	license: {
 		name: "MIT License"
@@ -109,28 +109,34 @@
 
 let HASHTAG = '#ポーカーチャレンジ'
 
-let seed = USER_USERNAME
+let seed = ''
+let seed_v = ''
 let seedinput = Ui:C:textInput({
 	onInput: @(text) {
 		seed = text
-		drawbutton.update(if text.len > 0 { { disabled: false } } else { { disabled: true } })
 	}
-	default: USER_USERNAME
+	default: ''
 	label: 'シード値'
-	caption: `山札をシャッフルするときの乱数のシードを入力します。`
+	caption: `山札をシャッフルするときの乱数のシードを入力します。空欄でランダムになります。`
 }, 'seedinput')
+let seedfolder = Ui:C:folder({
+	children: [ seedinput ]
+	title: 'シード値'
+	opened: false
+}, 'seedfolder')
 let drawbutton = Ui:C:button({
 	text: 'ドロー！'
 	onClick: @(){
-		if seed.len <= 0 { return Mk:dialog('Assertion error', 'assertion seed.len > 0 not satisfiable', 'error') }
 		drawbutton.update({ disabled: true })
-		let hand = game.create_hand(game.create_table(`{Date:year()}:{Date:month()}:{Date:day()}:{seed}`))
+		seed_v = if seed.len > 0 { seed } else { Util:uuid() }
+		let hand = game.create_hand(game.create_table(`{Date:year()}:{Date:month()}:{Date:day()}:{seed_v}`))
 		let result = [
-			`<center>$[tada.speed=0s {hand.to_mfm()}]`
+			`<center>$[tada.speed=0s $[tada.speed=0s $[tada.speed=0s $[tada.speed=0s {hand.to_mfm()}]]]]`
 			`$[font.serif {hand.to_role().name.upper()}]</center>`
 			''
 			`{THIS_URL} {HASHTAG}`
 		].join(Str:lf)
+		seedtext.update({text: `シード値: {seed_v}`})
 		resulttext.update({ text: result })
 		postformbutton.update({ form: { text: result } })
 		resultarea.update({ hidden: false })
@@ -140,8 +146,9 @@ let drawbutton = Ui:C:button({
 	disabled: false
 }, 'drawbutton')
 let preparearea = Ui:C:container({
-	children: [ seedinput, drawbutton ]
+	children: [ drawbutton, seedfolder ]
 }, 'preparearea')
+let seedtext = Ui:C:text({ text: '', size: 0.75 }, 'seedtext')
 let resulttext = Ui:C:mfm({ text: '' }, 'resulttext')
 let postformbutton = Ui:C:postFormButton({
 	text: "投稿！"
@@ -149,7 +156,7 @@ let postformbutton = Ui:C:postFormButton({
 	form: { text: '' }
 }, 'postformbutton')
 let resultarea = Ui:C:container({
-	children: [ Ui:C:text({ text: '結果', size: 1.2 }), resulttext, postformbutton ]
+	children: [ Ui:C:text({ text: '結果', size: 1.2 }), seedtext, resulttext, postformbutton ]
 	hidden: true
 }, 'resultarea')
 
