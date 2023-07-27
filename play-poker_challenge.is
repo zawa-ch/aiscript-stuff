@@ -98,7 +98,7 @@
 		var deck = CardBundle(DECK_BASE)
 		let rand = Math:gen_rng(seed)
 		@pick_card() {
-			let i = rand(0, deck.count())
+			let i = rand(0, deck.count() - 1)
 			deck.remove(i)
 		}
 		{ deck: @(){ deck }, pick_card: pick_card }
