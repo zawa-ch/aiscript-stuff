@@ -1,7 +1,7 @@
 ### {
 	name: "ポーカーチャレンジ"
 	author: "zawa-ch."
-	version: "1.0.0"
+	version: "1.0.1"
 	description: "テキストを入力してドロー！内容は日替わりです"
 	license: {
 		name: "MIT License"
