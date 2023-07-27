@@ -117,8 +117,13 @@ let seedinput = Ui:C:textInput({
 	}
 	default: ''
 	label: 'シード値'
-	caption: `山札をシャッフルするときの乱数のシードを入力します。`
+	caption: `山札をシャッフルするときの乱数のシードを入力します。空欄でランダムになります。`
 }, 'seedinput')
+let seedfolder = Ui:C:folder({
+	children: [ seedinput ]
+	title: 'シード値'
+	opened: false
+}, 'seedfolder')
 let drawbutton = Ui:C:button({
 	text: 'ドロー！'
 	onClick: @(){
@@ -141,7 +146,7 @@ let drawbutton = Ui:C:button({
 	disabled: false
 }, 'drawbutton')
 let preparearea = Ui:C:container({
-	children: [ seedinput, drawbutton ]
+	children: [ drawbutton, seedfolder ]
 }, 'preparearea')
 let seedtext = Ui:C:text({ text: '', size: 0.75 }, 'seedtext')
 let resulttext = Ui:C:mfm({ text: '' }, 'resulttext')
