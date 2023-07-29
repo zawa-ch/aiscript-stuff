@@ -165,7 +165,8 @@ let drawbutton = Ui:C:button({
 	onClick: @(){
 		drawbutton.update({ disabled: true })
 		seed_v = if seed.len > 0 { seed } else { Util:uuid() }
-		let hand = game.create_hand(game.create_table(`{Date:year()}:{Date:month()}:{Date:day()}:{seed_v}`))
+		var hand = game.create_hand(game.create_table(`{Date:year()}:{Date:month()}:{Date:day()}:{seed_v}`))
+		hand.sort()
 		let result = [
 			`<center>$[x3 {hand.to_mfm()}]`
 			`$[font.serif {hand.to_role().name.upper()}]</center>`
