@@ -6,7 +6,22 @@
 		diamond: { rank: 2, name: 'diamond', symbol: '♦', color: 'e11' },
 		club: { rank: 3, name: 'club', symbol: '♣', color: null },
 	}
-	@Card(suits, rank, card) {
+	let NUMBERS = {
+		ace: { rank: 0, name: 'ace', symbol: 'A' }
+		king: { rank: 1, name: 'king', symbol: 'K' }
+		queen: { rank: 2, name: 'queen', symbol: 'Q' }
+		jack: { rank: 3, name: 'jack', symbol: 'J' }
+		ten: { rank: 4, name: 'ten', symbol: '10' }
+		nine: { rank: 5, name: 'nine', symbol: '9' }
+		eight: { rank: 6, name: 'eight', symbol: '8' }
+		seven: { rank: 7, name: 'seven', symbol: '7' }
+		six: { rank: 8, name: 'six', symbol: '6' }
+		five: { rank: 9, name: 'five', symbol: '5' }
+		four: { rank: 10, name: 'four', symbol: '4' }
+		three: { rank: 11, name: 'three', symbol: '3' }
+		two: { rank: 12, name: 'two', symbol: '2' }
+	}
+	@Card(suits, number, card) {
 		@to_mfm() {
 			[
 				if Core:type(suits.color) == 'str' { `$[fg.color={suits.color} ` } else { '' }
@@ -14,31 +29,31 @@
 				if Core:type(suits.color) == 'str' { ']' } else { '' }
 			].join()
 		}
-		{ suits: suits, rank: rank, card: card, to_mfm: to_mfm }
+		{ suits: suits, number: number, card: card, to_mfm: to_mfm }
 	}
-	@card_comp(l, r) { if l.rank == r.rank { if l.suits.rank == r.suits.rank { 0 } elif l.suits.rank > r.suits.rank { 1 } else { -1 } } elif l.rank > r.rank { 1 } else { -1 } }
+	@card_comp(l, r) { if l.number.rank == r.number.rank { if l.suits.rank == r.suits.rank { 0 } elif l.suits.rank > r.suits.rank { 1 } else { -1 } } elif l.number.rank > r.number.rank { 1 } else { -1 } }
 	let DECK_BASE = [
-		Card(SUITS.spade, 0, '🂡'), Card(SUITS.heart, 0, '🂱'), Card(SUITS.diamond, 0, '🃁'), Card(SUITS.club, 0, '🃑'),
-		Card(SUITS.spade, 1, '🂮'), Card(SUITS.heart, 1, '🂾'), Card(SUITS.diamond, 1, '🃎'), Card(SUITS.club, 1, '🃞'),
-		Card(SUITS.spade, 2, '🂭'), Card(SUITS.heart, 2, '🂽'), Card(SUITS.diamond, 2, '🃍'), Card(SUITS.club, 2, '🃝'),
-		Card(SUITS.spade, 3, '🂫'), Card(SUITS.heart, 3, '🂻'), Card(SUITS.diamond, 3, '🃋'), Card(SUITS.club, 3, '🃛'),
-		Card(SUITS.spade, 4, '🂪'), Card(SUITS.heart, 4, '🂺'), Card(SUITS.diamond, 4, '🃊'), Card(SUITS.club, 4, '🃚'),
-		Card(SUITS.spade, 5, '🂩'), Card(SUITS.heart, 5, '🂹'), Card(SUITS.diamond, 5, '🃉'), Card(SUITS.club, 5, '🃙'),
-		Card(SUITS.spade, 6, '🂨'), Card(SUITS.heart, 6, '🂸'), Card(SUITS.diamond, 6, '🃈'), Card(SUITS.club, 6, '🃘'),
-		Card(SUITS.spade, 7, '🂧'), Card(SUITS.heart, 7, '🂷'), Card(SUITS.diamond, 7, '🃇'), Card(SUITS.club, 7, '🃗'),
-		Card(SUITS.spade, 8, '🂦'), Card(SUITS.heart, 8, '🂶'), Card(SUITS.diamond, 8, '🃆'), Card(SUITS.club, 8, '🃖'),
-		Card(SUITS.spade, 9, '🂥'), Card(SUITS.heart, 9, '🂵'), Card(SUITS.diamond, 9, '🃅'), Card(SUITS.club, 9, '🃕'),
-		Card(SUITS.spade, 10, '🂤'), Card(SUITS.heart, 10, '🂴'), Card(SUITS.diamond, 10, '🃄'), Card(SUITS.club, 10, '🃔'),
-		Card(SUITS.spade, 11, '🂣'), Card(SUITS.heart, 11, '🂳'), Card(SUITS.diamond, 11, '🃃'), Card(SUITS.club, 11, '🃓'),
-		Card(SUITS.spade, 12, '🂢'), Card(SUITS.heart, 12, '🂲'), Card(SUITS.diamond, 12, '🃂'), Card(SUITS.club, 12, '🃒'),
+		Card(SUITS.spade, NUMBERS.ace, '🂡'), Card(SUITS.heart, NUMBERS.ace, '🂱'), Card(SUITS.diamond, NUMBERS.ace, '🃁'), Card(SUITS.club, NUMBERS.ace, '🃑'),
+		Card(SUITS.spade, NUMBERS.king, '🂮'), Card(SUITS.heart, NUMBERS.king, '🂾'), Card(SUITS.diamond, NUMBERS.king, '🃎'), Card(SUITS.club, NUMBERS.king, '🃞'),
+		Card(SUITS.spade, NUMBERS.queen, '🂭'), Card(SUITS.heart, NUMBERS.queen, '🂽'), Card(SUITS.diamond, NUMBERS.queen, '🃍'), Card(SUITS.club, NUMBERS.queen, '🃝'),
+		Card(SUITS.spade, NUMBERS.jack, '🂫'), Card(SUITS.heart, NUMBERS.jack, '🂻'), Card(SUITS.diamond, NUMBERS.jack, '🃋'), Card(SUITS.club, NUMBERS.jack, '🃛'),
+		Card(SUITS.spade, NUMBERS.ten, '🂪'), Card(SUITS.heart, NUMBERS.ten, '🂺'), Card(SUITS.diamond, NUMBERS.ten, '🃊'), Card(SUITS.club, NUMBERS.ten, '🃚'),
+		Card(SUITS.spade, NUMBERS.nine, '🂩'), Card(SUITS.heart, NUMBERS.nine, '🂹'), Card(SUITS.diamond, NUMBERS.nine, '🃉'), Card(SUITS.club, NUMBERS.nine, '🃙'),
+		Card(SUITS.spade, NUMBERS.eight, '🂨'), Card(SUITS.heart, NUMBERS.eight, '🂸'), Card(SUITS.diamond, NUMBERS.eight, '🃈'), Card(SUITS.club, NUMBERS.eight, '🃘'),
+		Card(SUITS.spade, NUMBERS.seven, '🂧'), Card(SUITS.heart, NUMBERS.seven, '🂷'), Card(SUITS.diamond, NUMBERS.seven, '🃇'), Card(SUITS.club, NUMBERS.seven, '🃗'),
+		Card(SUITS.spade, NUMBERS.six, '🂦'), Card(SUITS.heart, NUMBERS.six, '🂶'), Card(SUITS.diamond, NUMBERS.six, '🃆'), Card(SUITS.club, NUMBERS.six, '🃖'),
+		Card(SUITS.spade, NUMBERS.five, '🂥'), Card(SUITS.heart, NUMBERS.five, '🂵'), Card(SUITS.diamond, NUMBERS.five, '🃅'), Card(SUITS.club, NUMBERS.five, '🃕'),
+		Card(SUITS.spade, NUMBERS.four, '🂤'), Card(SUITS.heart, NUMBERS.four, '🂴'), Card(SUITS.diamond, NUMBERS.four, '🃄'), Card(SUITS.club, NUMBERS.four, '🃔'),
+		Card(SUITS.spade, NUMBERS.three, '🂣'), Card(SUITS.heart, NUMBERS.three, '🂳'), Card(SUITS.diamond, NUMBERS.three, '🃃'), Card(SUITS.club, NUMBERS.three, '🃓'),
+		Card(SUITS.spade, NUMBERS.two, '🂢'), Card(SUITS.heart, NUMBERS.two, '🂲'), Card(SUITS.diamond, NUMBERS.two, '🃂'), Card(SUITS.club, NUMBERS.two, '🃒'),
 	]
 	@is_flush(cardarr) { cardarr.reduce(@(a,i,n){ if Core:type(a) != 'null' { { suits: a.suits, result: a.result && ( a.suits.rank == i.suits.rank ) } } else { { suits: i.suits, result: true } } }, null).result }
-	@is_straight(cardarr) { cardarr.sort(card_comp).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: i.rank, result: a.result && (( (a.rank + 1) == i.rank ) || ( a.rank == 0 && i.rank == 9 )) } } else { { rank: i.rank, result: true } } }, null).result }
-	@is_royalstraight(cardarr) { cardarr.sort(card_comp).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: a.rank + 1, result: a.result && ( (a.rank + 1) == i.rank ) } } else { { rank: 0, result: i.rank == 0 } } }, null).result }
+	@is_straight(cardarr) { cardarr.sort(card_comp).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: i.number.rank, result: a.result && (( (a.rank + 1) == i.number.rank ) || ( a.rank == 0 && i.number.rank == 9 )) } } else { { rank: i.number.rank, result: true } } }, null).result }
+	@is_royalstraight(cardarr) { cardarr.sort(card_comp).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: a.rank + 1, result: a.result && ( (a.rank + 1) == i.number.rank ) } } else { { rank: 0, result: i.number.rank == 0 } } }, null).result }
 	@aggregate_pairs(cardarr) {
 		cardarr.reduce(@(a,i,n){
-			let f = a.find(@(ai,an){ ai.rank == i.rank })
-			if Core:type(f) != 'null' { f.cards.push(i) } else { a.push({ rank: i.rank, cards: [i] }) }
+			let f = a.find(@(ai,an){ ai.number.rank == i.number.rank })
+			if Core:type(f) != 'null' { f.cards.push(i) } else { a.push({ number: i.number, cards: [i] }) }
 			a
 		}, [])
 	}
