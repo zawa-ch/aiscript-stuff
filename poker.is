@@ -29,7 +29,13 @@
 				if Core:type(suits.color) == 'str' { ']' } else { '' }
 			].join()
 		}
-		{ suits: suits, number: number, card: card, to_mfm: to_mfm }
+		@to_string() {
+			`{number.name} of {suits.name}`
+		}
+		@to_symbol() {
+			`{suits.symbol}{number.symbol}`
+		}
+		{ suits: suits, number: number, card: card, to_mfm: to_mfm, to_string: to_string, to_symbol: to_symbol }
 	}
 	@card_comp(l, r) { if l.number.rank == r.number.rank { if l.suits.rank == r.suits.rank { 0 } elif l.suits.rank > r.suits.rank { 1 } else { -1 } } elif l.number.rank > r.number.rank { 1 } else { -1 } }
 	let DECK_BASE = [
