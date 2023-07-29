@@ -53,9 +53,12 @@
 		Card(SUITS.spade, NUMBERS.three, '🂣'), Card(SUITS.heart, NUMBERS.three, '🂳'), Card(SUITS.diamond, NUMBERS.three, '🃃'), Card(SUITS.club, NUMBERS.three, '🃓'),
 		Card(SUITS.spade, NUMBERS.two, '🂢'), Card(SUITS.heart, NUMBERS.two, '🂲'), Card(SUITS.diamond, NUMBERS.two, '🃂'), Card(SUITS.club, NUMBERS.two, '🃒'),
 	]
+	@get_rank_weakace(card) { if card.number.rank == 0 { 13 } else { card.number.rank } }
+	@card_comp_weakace(l, r) { if get_rank_weakace(l) == get_rank_weakace(r) { if l.suits.rank == r.suits.rank { 0 } elif l.suits.rank > r.suits.rank { 1 } else { -1 } } elif get_rank_weakace(l) > get_rank_weakace(r) { 1 } else { -1 } }
 	@is_flush(cardarr) { cardarr.reduce(@(a,i,n){ if Core:type(a) != 'null' { { suits: a.suits, result: a.result && ( a.suits.rank == i.suits.rank ) } } else { { suits: i.suits, result: true } } }, null).result }
-	@is_straight(cardarr) { cardarr.sort(card_comp).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: i.number.rank, result: a.result && (( (a.rank + 1) == i.number.rank ) || ( a.rank == 0 && i.number.rank == 9 )) } } else { { rank: i.number.rank, result: true } } }, null).result }
-	@is_royalstraight(cardarr) { cardarr.sort(card_comp).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: a.rank + 1, result: a.result && ( (a.rank + 1) == i.number.rank ) } } else { { rank: 0, result: i.number.rank == 0 } } }, null).result }
+	@is_straight(cardarr) { cardarr.copy().sort(card_comp).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: i.number.rank, result: a.result && ( (a.rank + 1) == i.number.rank ) } } else { { rank: i.number.rank, result: true } } }, null).result }
+	@is_straight_weakace(cardarr) { cardarr.copy().sort(card_comp_weakace).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: get_rank_weakace(i), result: a.result && ( (a.rank + 1) == get_rank_weakace(i) ) } } else { { rank: get_rank_weakace(i), result: true } } }, null).result }
+	@is_royalstraight(cardarr) { cardarr.copy().sort(card_comp).reduce(@(a,i,n){ if Core:type(a) != 'null' { { rank: a.rank + 1, result: a.result && ( (a.rank + 1) == i.number.rank ) } } else { { rank: 0, result: i.number.rank == 0 } } }, null).result }
 	@aggregate_pairs(cardarr) {
 		cardarr.reduce(@(a,i,n){
 			let f = a.find(@(ai,an){ ai.number.rank == i.number.rank })
@@ -63,18 +66,24 @@
 			a
 		}, [])
 	}
-	let HAND_ROLES = [
-		{ rank: 0, name: 'royal straight flush', check: @(cardarr) { is_flush(cardarr) && is_royalstraight(cardarr) } }
-		{ rank: 1, name: 'straight flush', check: @(cardarr) { is_flush(cardarr) && is_straight(cardarr) } }
-		{ rank: 2, name: 'four of a kind', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 4 }).len >= 1 } }
-		{ rank: 3, name: 'full house', check: @(cardarr) { (aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len == 3 }).len >= 1) && (aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len == 2 }).len >= 1) } }
-		{ rank: 4, name: 'flush', check: @(cardarr) { is_flush(cardarr) } }
-		{ rank: 5, name: 'straight', check: @(cardarr) { is_straight(cardarr) } }
-		{ rank: 6, name: 'three of a kind', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 3 }).len >= 1 } }
-		{ rank: 7, name: 'two pair', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 2 }).len >= 2 } }
-		{ rank: 8, name: 'one pair', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 2 }).len >= 1 } }
-		{ rank: 9, name: 'high card', check: @(cardarr) { true } }
-	]
+	@sort_with_pairs(cardarr) {
+		aggregate_pairs(cardarr.sort(card_comp)).sort(@(l,r){ if l.cards.len == r.cards.len { l.number.rank - r.number.rank } else { r.cards.len - l.cards.len } }).reduce(@(a,i,n){ a.concat(i.cards) }, [])
+	}
+	@sort_with_straight(cardarr) {
+		if is_straight_weakace(cardarr) { cardarr.sort(card_comp_weakace) } else { cardarr.sort(card_comp) }
+	}
+	@HAND_ROLES() { [
+		{ rank: 0, name: 'royal straight flush', check: @(cardarr) { is_flush(cardarr) && is_royalstraight(cardarr) }, sort: @(cardarr) { cardarr.sort(card_comp) } }
+		{ rank: 1, name: 'straight flush', check: @(cardarr) { is_flush(cardarr) && ( is_straight(cardarr) || is_straight_weakace(cardarr) ) }, sort: @(cardarr) { sort_with_straight(cardarr) } }
+		{ rank: 2, name: 'four of a kind', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 4 }).len >= 1 }, sort: @(cardarr) { sort_with_pairs(cardarr) } }
+		{ rank: 3, name: 'full house', check: @(cardarr) { (aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len == 3 }).len >= 1) && (aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len == 2 }).len >= 1) }, sort: @(cardarr) { sort_with_pairs(cardarr) } }
+		{ rank: 4, name: 'flush', check: @(cardarr) { is_flush(cardarr) }, sort: @(cardarr) { cardarr.sort(card_comp) } }
+		{ rank: 5, name: 'straight', check: @(cardarr) { is_straight(cardarr) || is_straight_weakace(cardarr) }, sort: @(cardarr) { sort_with_straight(cardarr) } }
+		{ rank: 6, name: 'three of a kind', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 3 }).len >= 1 }, sort: @(cardarr) { sort_with_pairs(cardarr) } }
+		{ rank: 7, name: 'two pair', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 2 }).len >= 2 }, sort: @(cardarr) { sort_with_pairs(cardarr) } }
+		{ rank: 8, name: 'one pair', check: @(cardarr) { aggregate_pairs(cardarr).filter(@(i,n){ i.cards.len >= 2 }).len >= 1 }, sort: @(cardarr) { sort_with_pairs(cardarr) } }
+		{ rank: 9, name: 'high card', check: @(cardarr) { true }, sort: @(cardarr) { cardarr.sort(card_comp) } }
+	] }
 	@CardBundle(cardarr) {
 		var data = if Core:type(cardarr) == 'arr' { cardarr.copy() } else { [] }
 
@@ -94,11 +103,14 @@
 	@Hands(table) {
 		var hand = CardBundle(null)
 		for 5 { hand.add(table.pick_card()) }
-		hand.sort()
 		@to_role() {
-			var r = HAND_ROLES.copy()
+			var r = HAND_ROLES()
 			r = r.filter(@(i,n){ i.check(hand.cards()) })
 			if r.len > 0 { r[0] } else { null }
+		}
+		@sort() {
+			var roles = to_role()
+			if Core:type(roles) != 'null' { hand = CardBundle(roles.sort(hand.cards())) } else { hand.sort() }
 		}
 		@to_string() {
 			hand.cards().map(@(i,n){ i.card }).join()
@@ -106,7 +118,7 @@
 		@to_mfm() {
 			hand.cards().map(@(i,n){ i.to_mfm() }).join()
 		}
-		{ cards: @(){ hand }, to_role: to_role, to_string: to_string, to_mfm: to_mfm }
+		{ cards: @(){ hand }, to_role: to_role, sort: sort, to_string: to_string, to_mfm: to_mfm }
 	}
 	@Table(seed) {
 		var deck = CardBundle(DECK_BASE)
