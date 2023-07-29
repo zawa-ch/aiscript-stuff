@@ -12,6 +12,12 @@
 
 Misskeyでサーバー上の時刻を表示するAiScript App。
 
+### あなたをファイル化
+
+場所: `play-file_you.is`
+
+日替わりでユーザーのファイル化を診断するMisskey Play。
+
 ### ポーカーチャレンジ
 
 場所: `play-poker_challenge.is`
