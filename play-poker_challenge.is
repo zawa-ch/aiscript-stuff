@@ -152,16 +152,16 @@ let seedinput = Ui:C:textInput({
 		seed = text
 	}
 	default: ''
-	label: 'シード値'
-	caption: `山札をシャッフルするときの乱数のシードを入力します。空欄でランダムになります。`
+	label: 'seed'
+	caption: ''
 }, 'seedinput')
 let seedfolder = Ui:C:folder({
 	children: [ seedinput ]
-	title: 'シード値'
+	title: 'seed'
 	opened: false
 }, 'seedfolder')
 let drawbutton = Ui:C:button({
-	text: 'ドロー！'
+	text: 'Draw!'
 	onClick: @(){
 		drawbutton.update({ disabled: true })
 		seed_v = if seed.len > 0 { seed } else { Util:uuid() }
@@ -173,7 +173,7 @@ let drawbutton = Ui:C:button({
 			''
 			`{THIS_URL} {HASHTAG}`
 		].join(Str:lf)
-		seedtext.update({text: `シード値: {seed_v}`})
+		seedtext.update({text: `seed: {seed_v}`})
 		resulttext.update({ text: result })
 		postformbutton.update({ form: { text: result } })
 		resultarea.update({ hidden: false })
@@ -188,12 +188,12 @@ let preparearea = Ui:C:container({
 let seedtext = Ui:C:text({ text: '', size: 0.75 }, 'seedtext')
 let resulttext = Ui:C:mfm({ text: '' }, 'resulttext')
 let postformbutton = Ui:C:postFormButton({
-	text: "投稿！"
+	text: "Note!"
 	primary: true
 	form: { text: '' }
 }, 'postformbutton')
 let resultarea = Ui:C:container({
-	children: [ Ui:C:text({ text: '結果', size: 1.2 }), seedtext, resulttext, postformbutton ]
+	children: [ Ui:C:text({ text: 'Result', size: 1.2 }), seedtext, resulttext, postformbutton ]
 	hidden: true
 }, 'resultarea')
 
