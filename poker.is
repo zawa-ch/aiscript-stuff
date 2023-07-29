@@ -61,16 +61,19 @@
 			data.push(card)
 		}
 		@remove(index) {
-			data = data.sort(card_comp)
 			let r = data[index]
 			data = data.filter(@(i,n){ n != index })
 			r
 		}
-		{ cards: @() { data.sort(card_comp) }, count: @(){ data.len }, add: add, remove: remove }
+		@sort() {
+			data = data.sort(card_comp)
+		}
+		{ cards: @() { data.sort(card_comp) }, count: @(){ data.len }, add: add, remove: remove, sort: sort }
 	}
 	@Hands(table) {
 		var hand = CardBundle(null)
 		for 5 { hand.add(table.pick_card()) }
+		hand.sort()
 		@to_role() {
 			var r = HAND_ROLES.copy()
 			r = r.filter(@(i,n){ i.check(hand.cards()) })
