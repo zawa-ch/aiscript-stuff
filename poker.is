@@ -89,7 +89,7 @@
 		@sort() {
 			data = data.sort(card_comp)
 		}
-		{ cards: @() { data.sort(card_comp) }, count: @(){ data.len }, add: add, remove: remove, sort: sort }
+		{ cards: @() { data }, count: @(){ data.len }, add: add, remove: remove, sort: sort }
 	}
 	@Hands(table) {
 		var hand = CardBundle(null)
