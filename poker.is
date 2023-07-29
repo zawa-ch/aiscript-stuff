@@ -1,14 +1,4 @@
-### {
-	name: "ポーカーチャレンジ"
-	author: "zawa-ch."
-	version: "1.0.4"
-	description: "テキストを入力してドロー！同じseedでも内容は日替わりです"
-	license: {
-		name: "MIT License"
-		href: "http://www.opensource.org/licenses/mit-license.php"
-	}
-}
-
+/// 0.13.3
 @Poker() {
 	let SUITS = {
 		spade: { rank: 0, name: 'spade', symbol: '♠', color: null },
@@ -142,64 +132,3 @@
 
 	{ create_table: @(seed) { Table(seed) }, create_hand: @(table) { Hands(table) } }
 }
-
-let HASHTAG = '#ポーカーチャレンジ'
-
-let seed = ''
-let seed_v = ''
-let seedinput = Ui:C:textInput({
-	onInput: @(text) {
-		seed = text
-	}
-	default: ''
-	label: 'seed'
-	caption: ''
-}, 'seedinput')
-let seedfolder = Ui:C:folder({
-	children: [ seedinput ]
-	title: 'seed'
-	opened: false
-}, 'seedfolder')
-let drawbutton = Ui:C:button({
-	text: 'Draw!'
-	onClick: @(){
-		drawbutton.update({ disabled: true })
-		seed_v = if seed.len > 0 { seed } else { Util:uuid() }
-		var hand = game.create_hand(game.create_table(`{Date:year()}:{Date:month()}:{Date:day()}:{seed_v}`))
-		hand.sort()
-		let result = [
-			`<center>$[x3 {hand.to_mfm()}]`
-			`$[font.serif {hand.to_role().name.upper()}]</center>`
-			''
-			`{THIS_URL} {HASHTAG}`
-		].join(Str:lf)
-		seedtext.update({text: `seed: {seed_v}`})
-		resulttext.update({ text: result })
-		postformbutton.update({ form: { text: result } })
-		resultarea.update({ hidden: false })
-		drawbutton.update({ disabled: false })
-	}
-	primary: false
-	disabled: false
-}, 'drawbutton')
-let preparearea = Ui:C:container({
-	children: [ drawbutton, seedfolder ]
-}, 'preparearea')
-let seedtext = Ui:C:text({ text: '', size: 0.75 }, 'seedtext')
-let resulttext = Ui:C:mfm({ text: '' }, 'resulttext')
-let postformbutton = Ui:C:postFormButton({
-	text: "Note!"
-	primary: true
-	form: { text: '' }
-}, 'postformbutton')
-let resultarea = Ui:C:container({
-	children: [ Ui:C:text({ text: 'Result', size: 1.2 }), seedtext, resulttext, postformbutton ]
-	hidden: true
-}, 'resultarea')
-
-let game = Poker()
-
-@on_load() {
-	Ui:render([ preparearea, resultarea ])
-}
-on_load()
