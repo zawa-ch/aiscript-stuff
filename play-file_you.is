@@ -24,20 +24,20 @@ let HASHTAG = "#あなたをファイル化"
 	]
 	var result = []
 	for let i, data_source.len {
-		let jsontxt = Mk:api("pages/show" {pageId: data_source[i]}).content[0].text
+		let jsontxt = Mk:api("pages/show", {pageId: data_source[i]}).content[0].text
 		result = result.concat(Json:parse(jsontxt))
 	}
 	result
 }
 
 @rand_fs(rnd_f) {
-	let n = rnd_f(0 7)
+	let n = rnd_f(0, 7)
 	var r = 0
 	for n {
-		r = r + rnd_f(0 1024)
-		r = r * (1 + rnd_f(0 1024))
+		r = r + rnd_f(0, 1024)
+		r = r * (1 + rnd_f(0, 1024))
 	}
-	r + rnd_f(0 1024)
+	r + rnd_f(0, 1024)
 }
 
 let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
@@ -54,7 +54,7 @@ let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 	if i == 0 { 1 }
 	else { 10 * p10(i - 1) }
 }
-@round_sig(value digit) {
+@round_sig(value, digit) {
 	if value < p10(digit - 1) {
 		round_sig((value * 10) digit) / 10
 	} elif p10(digit) < value {
@@ -64,12 +64,12 @@ let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 	}
 }
 
-@draw(id callback) {
+@draw(id, callback) {
 	let random = Math:gen_rng(`{USER_ID}:{id}`)
-	let ft = filetypes[random(0 filetypes.len)]
-	let fe = ft.ext[random(0 ft.ext.len)]
+	let ft = filetypes[random(0, filetypes.len)]
+	let fe = ft.ext[random(0, ft.ext.len)]
 	let fs = rand_fs(random)
-	let fs_h = `{round_sig(fs_class(fs).r 4)} {fs_unit[(fs_class(fs).n)]}`
+	let fs_h = `{round_sig(fs_class(fs).r,4)} {fs_unit[(fs_class(fs).n)]}`
 	let result = {
 		user: USER_ID
 		id: id
