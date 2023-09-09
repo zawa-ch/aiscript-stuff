@@ -20,11 +20,7 @@
 let HASHTAG = "#あなたをファイル化"
 @load_filetypes() {
 	let data_source=[
-		"9e00ohwlq7"
-		"9e010o1wq9"
-		"9e01607gqa"
-		"9e01fv02qb"
-		"9e01nk05qc"
+		//	ここにデータセットを記述したPageのIDを列挙してください
 	]
 	var result = []
 	for let i, data_source.len {
