@@ -1,8 +1,8 @@
-/// @ 0.13.1
+/// 0.13.3
 ### {
 	name: "あなたをファイル化"
 	author: "zawa-ch."
-	version: "1.0.1"
+	version: "1.0.2"
 	description: "あなたをファイル化するとどんなファイルになるのか...?"
 	license: {
 		name: "MIT License"
@@ -16,32 +16,28 @@
 // ## このソースをコピーするにあたっての重要な注意 ##
 // このPlayスクリプトで使用されるデータセットは規模があまりにも大きいため、
 // 複数のPageにJSONを記述し、Misskey APIによって取得しています
-// **単純にこのスクリプトのコピーのみでは動作しません**
+// **このスクリプトの単純なコピーのみでは動作しません**
 let HASHTAG = "#あなたをファイル化"
 @load_filetypes() {
 	let data_source=[
-		"9e00ohwlq7"
-		"9e010o1wq9"
-		"9e01607gqa"
-		"9e01fv02qb"
-		"9e01nk05qc"
+		//	ここにデータセットを記述したPageのIDを列挙してください
 	]
 	var result = []
 	for let i, data_source.len {
-		let jsontxt = Mk:api("pages/show" {pageId: data_source[i]}).content[0].text
+		let jsontxt = Mk:api("pages/show", {pageId: data_source[i]}).content[0].text
 		result = result.concat(Json:parse(jsontxt))
 	}
 	result
 }
 
 @rand_fs(rnd_f) {
-	let n = rnd_f(0 7)
+	let n = rnd_f(0, 7)
 	var r = 0
 	for n {
-		r = r + rnd_f(0 1024)
-		r = r * (1 + rnd_f(0 1024))
+		r = r + rnd_f(0, 1023)
+		r = r * (1 + rnd_f(0, 1023))
 	}
-	r + rnd_f(0 1024)
+	r + rnd_f(0, 1023)
 }
 
 let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
@@ -58,7 +54,7 @@ let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 	if i == 0 { 1 }
 	else { 10 * p10(i - 1) }
 }
-@round_sig(value digit) {
+@round_sig(value, digit) {
 	if value < p10(digit - 1) {
 		round_sig((value * 10) digit) / 10
 	} elif p10(digit) < value {
@@ -68,12 +64,12 @@ let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 	}
 }
 
-@draw(id callback) {
+@draw(id, callback) {
 	let random = Math:gen_rng(`{USER_ID}:{id}`)
-	let ft = filetypes[random(0 filetypes.len)]
-	let fe = ft.ext[random(0 ft.ext.len)]
+	let ft = filetypes[random(0, filetypes.len - 1)]
+	let fe = ft.ext[random(0, ft.ext.len - 1)]
 	let fs = rand_fs(random)
-	let fs_h = `{round_sig(fs_class(fs).r 4)} {fs_unit[(fs_class(fs).n)]}`
+	let fs_h = `{round_sig(fs_class(fs).r,4)} {fs_unit[(fs_class(fs).n)]}`
 	let result = {
 		user: USER_ID
 		id: id
