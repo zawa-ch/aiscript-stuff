@@ -1,0 +1,268 @@
+/// @0.13.3
+### {
+	name: 'ServerClock'
+	author: 'zawa-ch.'
+	description: 'サーバー上の時刻を表示、あとエトセトラ'
+	version: '1.0.0-RC1'
+	license: {
+		name: "MIT License"
+		href: "http://www.opensource.org/licenses/mit-license.php"
+	}
+}
+
+let HASHTAG = '#serverclock'
+let WEEKNAME = [ 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT' ]
+
+///	Rustのenum Resultのような結果を格納するためのデータ構築メソッド
+let Result = {
+	ok: @(result) { { result: result, unwrap_err: null, unwrap: @(){ result }, is_ok: @(){ true }, is_err: @(){ false }, invoke: @(on_ok, on_err){ on_ok(result) } } }
+	error: @(err) { { error: err, unwrap_err: @(){ err }, unwrap: null, is_ok: @(){ false }, is_err: @(){ true }, invoke: @(on_ok, on_err){ on_err(err) } } }
+}
+
+///	dateを表すnumから曜日を表す0-6の数値を返す
+@day_of_week(date) {
+	let LOCALTIME_DIFF = Date:parse( `{Date:year(date)}/{Date:month(date)}/{Date:day(date)} 0:00 UTC`) - Date:parse(`{Date:year(date)}/{Date:month(date)}/{Date:day(date)} 0:00` )
+	let local_date = date + LOCALTIME_DIFF
+	Math:floor(local_date / 86400000 + 4) % 7
+}
+@datestr(date) {
+	var dy = `000{Date:year(date)}`
+	dy = dy.slice(dy.len - 4, dy.len)
+	var dm = `0{Date:month(date)}`
+	dm = dm.slice(dm.len - 2, dm.len)
+	var dd = `0{Date:day(date)}`
+	dd = dd.slice(dd.len - 2, dd.len)
+	`{dy}-{dm}-{dd}`
+}
+@timestr(date) {
+	var th = `0{Date:hour(date)}`
+	th = th.slice(th.len - 2, th.len)
+	var tm = `0{Date:minute(date)}`
+	tm = tm.slice(tm.len - 2, tm.len)
+	var ts = `0{Date:second(date)}`
+	ts = ts.slice(ts.len - 2, ts.len)
+	var ms = `00{date%1000}`
+	ms = ms.slice(ms.len - 3, ms.len)
+	`{th}:{tm}:{ts}.{ms}`
+}
+
+///	ServerClockの設定
+@ServerClockPlayConf(conf) {
+	@data_context() { 'net.geoplanetary.stellar_ch.serverclock_play.config' }
+	@data_version() { 1 }
+	@factory_init() { {
+		schema: { context: data_context(), version: data_version() },
+		update_interval: 16,
+		textsize: 2,
+		display: {
+			date: true,
+			localclock: true,
+			difference: true,
+		},
+	} }
+	let data = if Core:type(conf) == 'obj' { Obj:copy(conf) } else { conf }
+	///	設定の初期化を行う
+	@initialize() { data = factory_init() }
+	///	設定オブジェクトのスキーマを確認する
+	@check_schema() {
+		match true {
+			Core:type(data) != 'obj' => Result.error({ code: 'INVALID_DATATYPE', path: '$', type: Core:type(data), expect: 'obj' })
+			Core:type(data.schema) != 'obj' => Result.error({ code: 'INVALID_DATATYPE', path: '$.schema', type: Core:type(data.schema), expect: 'obj' })
+			Core:type(data.schema.context) != 'str' => Result.error({ code: 'INVALID_DATATYPE', path: '$.schema.context', type: Core:type(data.schema.context), expect: 'str' })
+			Core:type(data.schema.version) != 'num' => Result.error({ code: 'INVALID_DATATYPE', path: '$.schema.version', type: Core:type(data.schema.version), expect: 'num' })
+			(data.schema.context != data_context()) => Result.error({ code: 'CONTEXT_NOT_MATCH', context: data.schema.context, expect: data_context() })
+			(data.schema.version != data_version()) => Result.error({ code: 'VERSION_NOT_MATCH', version: data.schema.version, expect: data_version() })
+			* => Result.ok({})
+		}
+	}
+	///	設定オブジェクトの整合性を確認する
+	@check_integrity() {
+		let chkschema = check_schema()
+		if chkschema.is_err() { return Result.error({ code: 'SCHEMA_ERROR', inner_error: chkschema.unwrap_err() }) }
+		match true {
+			Core:type(data.update_interval) != 'num' => Result.error({ code: 'INVALID_DATATYPE', path: 'data.update_interval', type: Core:type(data.update_interval), expect: 'num' })
+			Core:type(data.textsize) != 'num' => Result.error({ code: 'INVALID_DATATYPE', path: 'data.textsize', type: Core:type(data.textsize), expect: 'num' })
+			Core:type(data.display) != 'obj' => Result.error({ code: 'INVALID_DATATYPE', path: 'data.display', type: Core:type(data.display), expect: 'obj' })
+			Core:type(data.display.date) != 'bool' => Result.error({ code: 'INVALID_DATATYPE', path: 'data.display.date', type: Core:type(data.display.date), expect: 'bool' })
+			Core:type(data.display.localclock) != 'bool' => Result.error({ code: 'INVALID_DATATYPE', path: 'data.display.localclock', type: Core:type(data.display.localclock), expect: 'bool' })
+			Core:type(data.display.difference) != 'bool' => Result.error({ code: 'INVALID_DATATYPE', path: 'data.display.difference', type: Core:type(data.display.difference), expect: 'bool' })
+			* => Result.ok({})
+		}
+	}
+	///	設定が正しいものであるかを取得する
+	@validation() {
+		let chkschema = check_schema()
+		if chkschema.is_err() { return Result.error({ code: 'SCHEMA_ERROR', inner_error: chkschema.unwrap_err() }) }
+		let chkintg = check_schema()
+		if chkintg.is_err() { return Result.error({ code: 'INTEGRITY_ERROR', inner_error: chkintg.unwrap_err() }) }
+		match true {
+			data.update_interval <= 0 => Result.error({ code: 'VALUE_OUT_OF_RANGE', path: 'data.update_interval', value: data.update_interval })
+			data.textsize <= 0 => Result.error({ code: 'VALUE_OUT_OF_RANGE', path: 'data.textsize', type: data.textsize })
+			* => Result.ok({})
+		}
+	}
+	///	設定をオブジェクトとして取得する
+	@get_data() { data }
+	///	設定要素のゲッター
+	@getter(path) {
+		let i = check_integrity()
+		if i.is_err() { return Result.error({ code: 'INTEGRITY_CHECK_FAILURE', inner_error: i.unwrap_err() }) }
+		match path {
+			'update_interval' => Result.ok(data.update_interval)
+			'textsize' => Result.ok(data.textsize)
+			'display.date' => Result.ok(data.display.date)
+			'display.localclock' => Result.ok(data.display.localclock)
+			'display.difference' => Result.ok(data.display.difference)
+			* => Result.error({ code: 'INVALID_PATH', path: path })
+		}
+	}
+	///	設定要素のセッター
+	@setter(path, value) {
+		let i = check_integrity()
+		if i.is_err() { return Result.error({ code: 'INTEGRITY_CHECK_FAILURE', inner_error: i.unwrap_err() }) }
+		match path {
+			'update_interval' => eval {
+				if Core:type(value) != 'num' { return Result.error({ code: 'TYPE_NOT_MATCH', type: Core:type(value), expect: 'num' }) }
+				if value <= 0 { return Result.error({ code: 'OUT_OF_RANGE', value: value }) }
+				data.update_interval = value
+				Result.ok({ newvalue: data.update_interval })
+			}
+			'textsize' => eval {
+				if Core:type(value) != 'num' { return Result.error({ code: 'TYPE_NOT_MATCH', type: Core:type(value), expect: 'num' }) }
+				if value <= 0 { return Result.error({ code: 'OUT_OF_RANGE', value: value }) }
+				data.textsize = value
+				Result.ok({ newvalue: data.textsize })
+			}
+			'display.date' => eval {
+				if Core:type(value) != 'bool' { return Result.error({ code: 'TYPE_NOT_MATCH', type: Core:type(value), expect: 'bool' }) }
+				data.display.date = value
+				Result.ok({ newvalue: data.display.date })
+			}
+			'display.localclock' => eval {
+				if Core:type(value) != 'bool' { return Result.error({ code: 'TYPE_NOT_MATCH', type: Core:type(value), expect: 'bool' }) }
+				data.display.localclock = value
+				Result.ok({ newvalue: data.display.localclock })
+			}
+			'display.difference' => eval {
+				if Core:type(value) != 'bool' { return Result.error({ code: 'TYPE_NOT_MATCH', type: Core:type(value), expect: 'bool' }) }
+				data.display.difference = value
+				Result.ok({ newvalue: data.display.difference })
+			}
+			* => Result.error({ code: 'INVALID_PATH', path: path })
+		}
+	}
+	///	設定内容からMisskeyのUI要素を構築する
+	@to_ui_elements(on_update) {
+		let i = check_integrity()
+		if i.is_err() { return Result.error({ code: 'INTEGRITY_CHECK_FAILURE', inner_error: i.unwrap_err() }) }
+		Result.ok([
+			Ui:C:numberInput({ label: 'update_interval', caption: 'インターフェースの更新速度。単位はミリ秒です。変更を反映するにはリロードが必要です。', default: data.update_interval, onInput: @(v) {
+				if v > 0 { data.update_interval = v }
+				if Core:type(on_update) == 'fn' { on_update('update_interval', v) }
+			} }),
+			Ui:C:numberInput({ label: 'textsize', caption: 'インターフェースのテキストの大きさ。', default: data.textsize, onInput: @(v) {
+				if v > 0 { data.textsize = v }
+				if Core:type(on_update) == 'fn' { on_update('textsize', v) }
+			} }),
+			Ui:C:switch({ label: 'display.date', caption: '日付の表示。', default: data.display.date, onChange: @(v) {
+				data.display.date = v
+				if Core:type(on_update) == 'fn' { on_update('display.date', v) }
+			} }),
+			Ui:C:switch({ label: 'display.localclock', caption: 'ローカル時刻の表示。', default: data.display.localclock, onChange: @(v) {
+				data.display.localclock = v
+				if Core:type(on_update) == 'fn' { on_update('display.localclock', v) }
+			} }),
+			Ui:C:switch({ label: 'display.difference', caption: '時間差の表示。', default: data.display.difference, onChange: @(v) {
+				data.display.difference = v
+				if Core:type(on_update) == 'fn' { on_update('display.difference', v) }
+			} }),
+		])
+	}
+	///	設定内容をJSONに変換し、その文字列を返す
+	@to_json() { Json:stringify(data) }
+	{ get: getter, set: setter, data: get_data, check_integrity: check_integrity, validation: validation, initialize: initialize, to_ui_elements: to_ui_elements, to_json: to_json }
+}
+
+@ServerTimeSync(hist_max, hist_min, avg_count) {
+	var difference = null
+	var data = []
+	@poll() {
+		let l1 = Date:now()
+		let s = Mk:api('ping', {})
+		let l2 = Date:now()
+		if Core:type(s) != 'obj' { return null }
+		if Core:type(s.pong) != 'num' { return null }
+		let servertime = s.pong
+		let localtime = Math:floor(l1 / 2 + l2 / 2)
+		{ value: servertime - localtime, error: Math:floor((l2 - l1) / 2) }
+	}
+	@sync() {
+		loop {
+			let p = poll()
+			if Core:type(p) == 'null' { return null }
+			data.push(p)
+			if data.len > hist_max { data.shift() }
+			if (data.len >= hist_min) && (data.len <= hist_max) { break }
+		}
+		let d = data.copy().sort(@(l, r){ l.error - r.error }).slice(0, avg_count)
+		let sum = d.reduce(@(a,i,n){ { value: a.value + i.value, error: a.error + i.error } }, { value: 0, error: 0 })
+		difference = { value: Math:round(sum.value / d.len), error: Math:round(sum.error / d.len) }
+	}
+	@convert(date) { date + difference.value }
+	@current_time() { convert(Date:now()) }
+	{ difference: @(){difference}, sync: sync, convert: convert, current_time: current_time }
+}
+
+@conf_on_update(path, value) {
+	if conf.validation().is_ok() { Mk:save("serverclock_play.config", conf.data()) }
+}
+
+@conf_init_on_click() {
+	conf.initialize()
+	Mk:save("serverclock_play.config", conf.data())
+	settingarea.update({ children: conf.to_ui_elements(conf_on_update).unwrap() })
+}
+
+let conf = ServerClockPlayConf(Mk:load("serverclock_play.config"))
+if conf.validation().is_err() {
+	conf.initialize()
+	Mk:save("serverclock_play.config", conf.data())
+}
+
+let textarea = Ui:C:mfm({ size: conf.get('textsize').unwrap(), font: 'monospace' })
+let settingarea = Ui:C:container({ children: conf.to_ui_elements(conf_on_update).unwrap() })
+var stime = ServerTimeSync(5, 5, 3)
+stime.sync()
+
+@on_update() {
+	let lt = Date:now()
+	let diff = stime.difference()
+	let st = if Core:type(diff) == 'obj' { lt + stime.difference().value } else { null }
+	var text = []
+	if conf.get('display.date').unwrap() { text.push(if Core:type(st) == 'num' { `{datestr(st)} {WEEKNAME[day_of_week(st)]}` } else { '' }) }
+	text.push(if Core:type(st) == 'num' { `$[scale.x=1.3,y=1.3 {timestr(st)}]` } else { '$[scale.x=1.3,y=1.3 syncing...]' })
+	if conf.get('display.localclock').unwrap() { text.push(`<small>Local: {timestr(lt)}</small>`) }
+	if conf.get('display.difference').unwrap() { text.push(if Core:type(diff) == 'obj' { `<small>{diff.value}±{diff.error} ms</small>` } else { `` }) }
+	textarea.update({
+		text: `<center>{text.join(Str:lf)}</center>`,
+		size: conf.get('textsize').unwrap(),
+		font: 'monospace'
+	})
+}
+
+Ui:render([
+	Ui:C:mfm({ text: "現在の時刻", size: 1, bold: false, font: "sans-serif"}),
+	textarea,
+	Ui:C:folder({ title: "ツール", opened: false, children: [
+		Ui:C:postFormButton({ text: "334", primary: false, rounded: false, form: {text: `?[334]({THIS_URL}){Str:lf}{HASHTAG}`} }),
+		Ui:C:postFormButton({ text: "340", primary: false, rounded: false, form: {text: `?[340]({THIS_URL}){Str:lf}{HASHTAG}`} }),
+	] }),
+	Ui:C:folder({ title: "設定", opened: false, children: [
+		settingarea,
+		Ui:C:buttons({ buttons: [
+			{ text: "initialize", onClick: conf_init_on_click, primary: false, rounded: false, disabled: false },
+		] }),
+	] }),
+])
+
+var updater = Async:interval(conf.get('update_interval').unwrap(), on_update, true)
