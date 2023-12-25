@@ -12,6 +12,12 @@
 
 Misskeyでサーバー上の時刻を表示するAiScript App。
 
+### Date converter
+
+場所: `play-dateconv.is`
+
+指定された時刻からunixtimeのMFM構文を生成するMisskey Play。
+
 ### あなたをファイル化
 
 場所: `play-file_you.is`
