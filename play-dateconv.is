@@ -1,0 +1,90 @@
+// 0.16.0
+### {
+	name: 'Date converter'
+	author: 'zawa-ch.'
+	description: '日付をunixtime MFM構文に変換する'
+	version: '1.0.0'
+	license: {
+		name: "MIT License"
+		href: "http://www.opensource.org/licenses/mit-license.php"
+	}
+}
+
+:: DateMFM {
+	/// DateMFM:convert(s)
+	///	日付文字列をパースし、unixdate MFM構文に変換する
+	@convert(s) {
+		// Error:create 使いたいが、0.16.0ではまだ実装されていない
+		//if Core:type(s) != 'str' { return Error:create('INVALID_ARGUMENT', { text: 'Argument "s" is not string.', expect: 'str', reported: Core:type(s) }) }
+		if Core:type(s) != 'str' { return null }
+		let t = Date:parse(s)
+		// Error:create 使いたいが、0.16.0ではまだ実装されていない
+		//if !(t <= 0) && !(t >= 0) { return Error:create('INVALID_ARGUMENT', { text: 'Argument "s" is not valid date string.' }) }
+		if !(t <= 0 || t >= 0) { return null }
+		`$[unixtime {t/1000}]`
+	}
+}
+
+///	zerosupply(num, l)
+///	数値をゼロサプライ文字列に変換する
+@zerosupply(num, l) {
+	if `{num}`.len >= l { return `{num}` }
+	let zs = eval {
+		var z = []
+		for l { z.push('0') }
+		z.join()
+	}
+	let t = `{zs}{num}`
+	t.slice(t.len - l, t.len)
+}
+
+///	LOCALIZATION
+///	ローカライズ用アセット
+let LOCALIZATION = {
+	dateInputTitle: @(){ '日付/時刻' }
+	dateInputCaption: @(){ '日付と時刻を入力します。"%y/%m/%d %H:%M:%S" の形式のほか、ISO 8601 形式(%y-%m-%dT%H%M%S%:z)、RFC 3339(%y-%m-%d %H%M%S%:z)形式が使えることを確認しています。' }
+	currenttime: @(){ '現在時刻' }
+	result: @(){ '結果' }
+	viewSource: @(){ 'MFMソースを表示' }
+}
+
+let resultPreview = Ui:C:mfm({ text: '' })
+let resultCode = Ui:C:mfm({ text: '' })
+
+let dateInput = Ui:C:textInput({
+	onInput: @(v){
+		let mfm = DateMFM:convert(v)
+		if Core:type(mfm) != 'str' { return null }
+		resultPreview.update({ text: mfm })
+		resultCode.update({ text: [ '```mfm', mfm, '```' ].join(Str:lf) })
+	},
+	label: LOCALIZATION.dateInputTitle(),
+	caption: LOCALIZATION.dateInputCaption(),
+})
+
+let currenttimeButton = Ui:C:button({
+	text: LOCALIZATION.currenttime(),
+	onClick: @(){
+		let c = Date:now()
+		dateInput.update({ default: `{zerosupply(Date:year(c),4)}/{zerosupply(Date:month(c),2)}/{zerosupply(Date:day(c),2)} {zerosupply(Date:hour(c),2)}:{zerosupply(Date:minute(c),2)}:{zerosupply(Date:second(c),2)}` })
+	},
+	primary: true,
+	rounded: false,
+	disabled: false,
+})
+
+Ui:render([
+	Ui:C:container({ children: [
+		dateInput,
+	] }),
+	Ui:C:container({ children: [
+		currenttimeButton,
+	], align: 'right' }),
+	Ui:C:text({ text: LOCALIZATION.result() }),
+	Ui:C:container({ children: [
+		resultPreview,
+	], borderWidth: 4, padding: 18, rounded: true, bgColor: 'var(--bg)' }),
+	Ui:C:folder({ children: [
+		resultCode,
+	], title: LOCALIZATION.viewSource(), opened: false }),
+])
