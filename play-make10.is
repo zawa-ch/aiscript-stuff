@@ -1,0 +1,82 @@
+// 0.17.0
+### {
+	name: 'Make 10'
+	author: 'zawa-ch.'
+	description: '診断メーカー「[10つくったー](https://shindanmaker.com/217387)」のAiScript移植版'
+	version: '1.0.0'
+	license: {
+		name: "MIT License"
+		href: "http://www.opensource.org/licenses/mit-license.php"
+	}
+}
+
+:: Random {
+@daily(seed) {
+	let t = Date:now()
+	Math:gen_rng(`{seed}|{Date:year(t)}|{Date:month(t)}|{Date:day(t)}`)
+}
+}
+
+:: Make10 {
+@TR(){ {
+	rules_title: @() { 'ルール' }
+	rules_content: @() { [
+		'与えられた4つの数を1回ずつ用いて、10になる数式を作ってください。',
+		'4つの数をちょうど1回ずつ使うのであれば、その順序や用法は問いません。',
+		'ただし、以下のことを行っては**なりません**。',
+		'',
+		'**文字/文字列としての数の使用**',
+		'数を文字、もしくは文字列として使用したり、同様のはたらきを持つ関数を使用してはなりません。',
+		'例えば、1と5を連結して15のように使用したり、2を反転して5として用いることはできません。',
+		'',
+		'**数と無関係に10を返すような関数の使用**',
+		'例えば、4つの引数を持ち、常に10を返すような関数を使ってしまうと、この問題を出す意味がなくなってしまいます。',
+		'',
+		'**与えられていない数の使用**',
+		'与えられていない数を使用できるのであればどのような数も生成できるため、この問題を出す意味がなくなってしまいます。',
+		'総和関数など媒介する変数が必要な場面における代数の使用は問題ありません。',
+		'',
+		'**微分関数、積分関数、後者関数の使用**',
+		'任意の数を切り捨てる、もしくは生成することができるため、与えられていない数を使用するのと同じになってしまいます。',
+	].join(Str:lf) }
+	question: @() { '問' }
+	probrem: @(name, nums) { `{name}は『{nums}』をつかって10を作ってください。` }
+	answer: @() { `回答` }
+} }
+@ctor(seed, name) {
+	var prob_values = []
+	let rand = Random:daily(seed)
+	for 4 {
+		prob_values.push(rand(0, 9999) % 10)
+	}
+	prob_values.sort(Core:sub)
+	{
+		probrem: @(){ Make10:TR().probrem(name, prob_values.map(@(v){ `{v}` }).join(', ')) }
+		values: @(){ prob_values.copy() }
+	}
+}
+}
+
+let m10 = Make10:ctor(USER_USERNAME, USER_NAME)
+
+let rules_folder = Ui:C:folder({
+	title: Make10:TR().rules_title(),
+	children: [ Ui:C:mfm({ text: Make10:TR().rules_content() }) ],
+	opened: false,
+})
+let problem_textarea = Ui:C:mfm({
+	text: [ `**{Make10:TR().question()}**`, m10.probrem() ].join(Str:lf),
+	size: 1.2
+})
+let postform_default_text = [ m10.probrem(), '', `{THIS_URL}` ].join(Str:lf)
+let post_button = Ui:C:postFormButton({
+	text: Make10:TR().answer(),
+	primary: true,
+	form: { text: postform_default_text },
+})
+
+Ui:render([
+	problem_textarea,
+	rules_folder,
+	post_button,
+])
