@@ -18,6 +18,12 @@ Misskeyでサーバー上の時刻を表示するAiScript App。
 
 指定された時刻からunixtimeのMFM構文を生成するMisskey Play。
 
+### Make 10
+
+場所: `play-make10.is`
+
+診断メーカー「[10つくったー](https://shindanmaker.com/217387)」のAiScript移植版。
+
 ### あなたをファイル化
 
 場所: `play-file_you.is`
