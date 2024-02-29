@@ -1,9 +1,9 @@
-// 0.16.0
+// 0.17.0
 ### {
 	name: 'Date converter'
 	author: 'zawa-ch.'
 	description: '日付をunixtime MFM構文に変換する'
-	version: '1.0.0'
+	version: '1.0.1'
 	license: {
 		name: "MIT License"
 		href: "http://www.opensource.org/licenses/mit-license.php"
@@ -14,13 +14,9 @@
 	/// DateMFM:convert(s)
 	///	日付文字列をパースし、unixdate MFM構文に変換する
 	@convert(s) {
-		// Error:create 使いたいが、0.16.0ではまだ実装されていない
-		//if Core:type(s) != 'str' { return Error:create('INVALID_ARGUMENT', { text: 'Argument "s" is not string.', expect: 'str', reported: Core:type(s) }) }
-		if Core:type(s) != 'str' { return null }
+		if Core:type(s) != 'str' { return Error:create('INVALID_ARGUMENT', { text: 'Argument "s" is not string.', expect: 'str', actual: Core:type(s) }) }
 		let t = Date:parse(s)
-		// Error:create 使いたいが、0.16.0ではまだ実装されていない
-		//if !(t <= 0) && !(t >= 0) { return Error:create('INVALID_ARGUMENT', { text: 'Argument "s" is not valid date string.' }) }
-		if !(t <= 0 || t >= 0) { return null }
+		if !(t <= 0 || t >= 0) { return Error:create('INVALID_ARGUMENT', { text: 'Argument "s" is not valid date string.' }) }
 		`$[unixtime {t/1000}]`
 	}
 }
