@@ -12,6 +12,12 @@
 
 Misskeyでサーバー上の時刻を表示するAiScript App。
 
+### ColorDictionary
+
+場所: `play-colordict.is`
+
+色の変換とサンプルの表示を行うMisskey Play。
+
 ### Date converter
 
 場所: `play-dateconv.is`
