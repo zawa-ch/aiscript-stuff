@@ -1,7 +1,7 @@
 // 0.17.0
 // color.is
 // 色空間の相互変換を行うライブラリ
-// version 1.0.0
+// version 1.0.1
 // Copyright 2024 zawa-ch. licensed under MIT License
 
 :: Color {
@@ -9,8 +9,8 @@
 @is_srgb(o) { (Core:type(o)=='obj')&&(Obj:has(o,'red'))&&(Core:type(o.red)=='num')&&(Obj:has(o,'green'))&&(Core:type(o.green)=='num')&&(Obj:has(o,'blue'))&&(Core:type(o.blue)=='num') }
 @hsv(h,s,v) {{hue: h, saturation: s, value: v}}
 @is_hsv(o) { (Core:type(o)=='obj')&&(Obj:has(o,'hue'))&&(Core:type(o.hue)=='num')&&(Obj:has(o,'saturation'))&&(Core:type(o.saturation)=='num')&&(Obj:has(o,'value'))&&(Core:type(o.value)=='num') }
-@hls(h,l,s) {{hue: h, saturation: s, illuminance: l}}
-@is_hls(o) { (Core:type(o)=='obj')&&(Obj:has(o,'hue'))&&(Core:type(o.hue)=='num')&&(Obj:has(o,'saturation'))&&(Core:type(o.saturation)=='num')&&(Obj:has(o,'illuminance'))&&(Core:type(o.illuminance)=='num') }
+@hls(h,l,s) {{hue: h, saturation: s, lightness: l}}
+@is_hls(o) { (Core:type(o)=='obj')&&(Obj:has(o,'hue'))&&(Core:type(o.hue)=='num')&&(Obj:has(o,'saturation'))&&(Core:type(o.saturation)=='num')&&(Obj:has(o,'lightness'))&&(Core:type(o.lightness)=='num') }
 @ycbcr(y,cb,cr) {{illuminance: y, cb: cb, cr: cr}}
 @is_ycbcr(o) { (Core:type(o)=='obj')&&(Obj:has(o,'illuminance'))&&(Core:type(o.illuminance)=='num')&&(Obj:has(o,'cb'))&&(Core:type(o.cb)=='num')&&(Obj:has(o,'cr'))&&(Core:type(o.cr)=='num') }
 @xyz(x,y,z) {{x: x, y: y, z: z}}
@@ -30,93 +30,104 @@
 	if Core:type(d) != 'num' { return d }
 	return Color:srgb(Num:from_hex(hex.slice(0,hex.len/3))/d,Num:from_hex(hex.slice(hex.len/3,hex.len/3*2))/d,Num:from_hex(hex.slice(hex.len/3*2, hex.len))/d)
 }
-@srgb_to_hsv(rgb) {
-	if !is_srgb(rgb) {return Error:create('INVALID_ARGUMENT', {text: 'rgb is not sRGB color type', callee: 'Color:srgb_to_hsv'})}
-	let min = Math:min(Math:min(rgb.red,rgb.green),rgb.blue)
-	let max = Math:max(Math:max(rgb.red,rgb.green),rgb.blue)
+@srgb_to_hex24(color) {
+	if !is_srgb(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not sRGB color type', callee: 'Color:srgb_to_hex24'})}
+	@h(v) {(`00{Num:to_hex(Math:round(Math:max(Math:min(v,1),0)*255))}`).slice((`00{Num:to_hex(Math:round(Math:max(Math:min(v,1),0)*255))}`).len-2,(`00{Num:to_hex(Math:round(Math:max(Math:min(v,1),0)*255))}`).len)}
+	`{h(color.red)}{h(color.green)}{h(color.blue)}`
+}
+@srgb_to_hsv(color) {
+	if !is_srgb(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not sRGB color type', callee: 'Color:srgb_to_hsv'})}
+	let min = Math:min(Math:min(color.red,color.green),color.blue)
+	let max = Math:max(Math:max(color.red,color.green),color.blue)
 	return Color:hsv(match min {
 		max => 0
-		rgb.blue => 60*(rgb.green-rgb.red)/(max-min)+60
-		rgb.red => 60*(rgb.blue-rgb.green)/(max-min)+180
-		rgb.green => 60*(rgb.red-rgb.blue)/(max-min)+300
-	},(max-min)/max,max)
+		color.blue => 60*(color.green-color.red)/(max-min)+60
+		color.red => 60*(color.blue-color.green)/(max-min)+180
+		color.green => 60*(color.red-color.blue)/(max-min)+300
+	},if max>0 {(max-min)/max} else {0},max)
 }
-@hsv_to_srgb(hsv) {
-	if !is_hsv(hsv) {return Error:create('INVALID_ARGUMENT', {text: 'hsv is not HSV color type', callee: 'Color:hsv_to_srgb'})}
-	let c = hsv.value*hsv.saturation
-	return match Math:trunc(hsv.hue/60) {
-		0 => Color:srgb(hsv.value,hsv.value-c*(1-hsv.hue/60),hsv.value-c)
-		1 => Color:srgb(hsv.value-c*(hsv.hue-60)/60,hsv.value,hsv.value-c)
-		2 => Color:srgb(hsv.value-c,hsv.value,hsv.value-c*(1-(hsv.hue-120)/60))
-		3 => Color:srgb(hsv.value-c,hsv.value-c*(hsv.hue-180)/60,hsv.value)
-		4 => Color:srgb(hsv.value-c*(1-(hsv.hue-240)/60),hsv.value-c,hsv.value)
-		5 => Color:srgb(hsv.value,hsv.value-c,hsv.value-c*(hsv.hue-300)/60)
-		* => Color:srgb(hsv.value-c,hsv.value-c,hsv.value-c)
+@hsv_to_srgb(color) {
+	if !is_hsv(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not HSV color type', callee: 'Color:hsv_to_srgb'})}
+	let c = color.value*color.saturation
+	let h = color.hue%360
+	return match Math:trunc(h/60) {
+		0 => Color:srgb(color.value,color.value-c*(1-h/60),color.value-c)
+		1 => Color:srgb(color.value-c*(h-60)/60,color.value,color.value-c)
+		2 => Color:srgb(color.value-c,color.value,color.value-c*(1-(h-120)/60))
+		3 => Color:srgb(color.value-c,color.value-c*(h-180)/60,color.value)
+		4 => Color:srgb(color.value-c*(1-(h-240)/60),color.value-c,color.value)
+		5 => Color:srgb(color.value,color.value-c,color.value-c*(h-300)/60)
+		* => Color:srgb(color.value-c,color.value-c,color.value-c)
 	}
 }
-@srgb_to_hls(rgb) {
-	if !is_srgb(rgb) {return Error:create('INVALID_ARGUMENT', {text: 'rgb is not sRGB color type', callee: 'Color:srgb_to_hls'})}
-	let min = Math:min(Math:min(rgb.red,rgb.green),rgb.blue)
-	let max = Math:max(Math:max(rgb.red,rgb.green),rgb.blue)
+@srgb_to_hls(color) {
+	if !is_srgb(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not sRGB color type', callee: 'Color:srgb_to_hls'})}
+	let min = Math:min(Math:min(color.red,color.green),color.blue)
+	let max = Math:max(Math:max(color.red,color.green),color.blue)
 	return Color:hls(match min {
 		max => 0
-		rgb.blue => 60*(rgb.green-rgb.red)/(max-min)+60
-		rgb.red => 60*(rgb.blue-rgb.green)/(max-min)+180
-		rgb.green => 60*(rgb.red-rgb.blue)/(max-min)+300
+		color.blue => 60*(color.green-color.red)/(max-min)+60
+		color.red => 60*(color.blue-color.green)/(max-min)+180
+		color.green => 60*(color.red-color.blue)/(max-min)+300
 	},(max-min)/2,max-min)
 }
-@hls_to_srgb(hls) {
-	if !is_hls(hls) {return Error:create('INVALID_ARGUMENT', {text: 'hls is not HLS color type', callee: 'Color:hls_to_srgb'})}
-	let min = hls.illuminance-hls.saturation/2
-	let max = hls.illuminance+hls.saturation/2
-	return match Math:trunc(hls.hue/60) {
-		0 => Color:srgb(max,min+(max-min)*hls.hue/60,min)
-		1 => Color:srgb(min+(max-min)*(120-hls.hue)/60,max,min)
-		2 => Color:srgb(min,max,min+(max-min)*(hls.hue-120)/60)
-		3 => Color:srgb(min,min+(max-min)*(240-hls.hue)/60,max)
-		4 => Color:srgb(min+(max-min)*(hls.hue-240)/60,min,max)
-		5 => Color:srgb(max,min,min+(max-min)*(360-hls.hue)/60)
+@hls_to_srgb(color) {
+	if !is_hls(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not HLS color type', callee: 'Color:hls_to_srgb'})}
+	let min = color.lightness-color.saturation/2
+	let max = color.lightness+color.saturation/2
+	let h = color.hue%360
+	return match Math:trunc(h/60) {
+		0 => Color:srgb(max,min+(max-min)*h/60,min)
+		1 => Color:srgb(min+(max-min)*(120-h)/60,max,min)
+		2 => Color:srgb(min,max,min+(max-min)*(h-120)/60)
+		3 => Color:srgb(min,min+(max-min)*(240-h)/60,max)
+		4 => Color:srgb(min+(max-min)*(h-240)/60,min,max)
+		5 => Color:srgb(max,min,min+(max-min)*(360-h)/60)
 		* => Color:srgb(min,min,min)
 	}
 }
-@srgb_to_ycbcr(rgb) {
-	if !is_srgb(rgb) {return Error:create('INVALID_ARGUMENT', {text: 'rgb is not sRGB color type', callee: 'Color:srgb_to_ycbcr'})}
-	let y = 0.2126*rgb.red+0.7152*rgb.green+0.0722*rgb.blue
-	return Color:ycbcr(y,(rgb.blue-y)/1.8556,(rgb.red-y)/1.5748)
+@srgb_to_ycbcr(color) {
+	if !is_srgb(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not sRGB color type', callee: 'Color:srgb_to_ycbcr'})}
+	let y = 0.2126*color.red+0.7152*color.green+0.0722*color.blue
+	return Color:ycbcr(y,(color.blue-y)/1.8556,(color.red-y)/1.5748)
 }
-@ycbcr_to_srgb(ycbcr) {
-	if !is_ycbcr(ycbcr) {return Error:create('INVALID_ARGUMENT', {text: 'ycbcr is not YCbCr color type', callee: 'Color:ycbcr_to_srgb'})}
-	return Color:srgb(ycbcr.illuminance+1.5748*ycbcr.cr,ycbcr.illuminance-0.187324*ycbcr.cb-0.468124*ycbcr.cr,ycbcr.illuminance+1.8556*ycbcr.cb)
+@ycbcr_to_srgb(color) {
+	if !is_ycbcr(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not YCbCr color type', callee: 'Color:ycbcr_to_srgb'})}
+	return Color:srgb(color.illuminance+1.5748*color.cr,color.illuminance-0.187324*color.cb-0.468124*color.cr,color.illuminance+1.8556*color.cb)
 }
-@srgb_to_xyz(rgb) {
-	if !is_srgb(rgb) {return Error:create('INVALID_ARGUMENT', {text: 'rgb is not sRGB color type', callee: 'Color:srgb_to_xyz'})}
+@srgb_to_xyz(color) {
+	if !is_srgb(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not sRGB color type', callee: 'Color:srgb_to_xyz'})}
 	@p(v) { if v<=0.04045 {v/12.92} else {Math:pow((v+0.055)/1.055,2.4)} }
 	// 2度視野, D65光源
-	return Color:xyz(p(rgb.red)*0.4124+p(rgb.green)*0.3576+p(rgb.blue)*0.1805,p(rgb.red)*0.2126+p(rgb.green)*0.7152+p(rgb.blue)*0.0722,p(rgb.red)*0.0193+p(rgb.green)*0.1192+p(rgb.blue)*0.9505)
+	return Color:xyz(p(color.red)*0.4124+p(color.green)*0.3576+p(color.blue)*0.1805,p(color.red)*0.2126+p(color.green)*0.7152+p(color.blue)*0.0722,p(color.red)*0.0193+p(color.green)*0.1192+p(color.blue)*0.9505)
 }
-@xyz_to_srgb(xyz) {
-	if !is_xyz(xyz) {return Error:create('INVALID_ARGUMENT', {text: 'xyz is not CIE XYZ color type', callee: 'Color:xyz_to_srgb'})}
+@xyz_to_srgb(color) {
+	if !is_xyz(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not CIE XYZ color type', callee: 'Color:xyz_to_srgb'})}
 	@p(v) { if v<=0.0031308 { v*12.92 } else { 1.055*Math:pow(v,1/2.4)-0.055 } }
-	return Color:srgb(p(xyz.x*3.2406-xyz.y*1.5372-xyz.z*0.4986),p(0-xyz.x*0.9689+xyz.y*1.8758+xyz.z*0.0415),p(xyz.x*0.0557-xyz.y*0.2040+xyz.z*1.0570))
+	return Color:srgb(p(color.x*3.2406-color.y*1.5372-color.z*0.4986),p(0-color.x*0.9689+color.y*1.8758+color.z*0.0415),p(color.x*0.0557-color.y*0.2040+color.z*1.0570))
 }
-@xyz_to_xyy(xyz) {
-	if !is_xyz(xyz) {return Error:create('INVALID_ARGUMENT', {text: 'xyz is not CIE XYZ color type', callee: 'Color:xyz_to_xyy'})}
-	return Color:xyy(xyz.x/(xyz.x+xyz.y+xyz.z),xyz.y/(xyz.x+xyz.y+xyz.z),xyz.y)
+@whitepoint() { Color:srgb_to_xyz(Color:srgb(1,1,1)) }
+@xyz_to_xyy(color) {
+	if !is_xyz(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not CIE XYZ color type', callee: 'Color:xyz_to_xyy'})}
+	let wp = Color:whitepoint()
+	let s = color.x+color.y+color.z
+	let ws = wp.x+wp.y+wp.z
+	return Color:xyy(if s>0 {color.x/s} else {wp.x/ws},if s>0 {color.y/s} else {wp.y/ws},color.y)
 }
-@xyy_to_xyz(xyy) {
-	if !is_xyy(xyy) {return Error:create('INVALID_ARGUMENT', {text: 'xyy is not CIE xyY color type', callee: 'Color:xyy_to_xyz'})}
-	return Color:xyz(xyy.illuminance/xyy.point_y*xyy.point_x,xyy.illuminance,xyy.illuminance/xyy.point_y*(1-xyy.point_x-xyy.point_y))
+@xyy_to_xyz(color) {
+	if !is_xyy(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not CIE xyY color type', callee: 'Color:xyy_to_xyz'})}
+	return Color:xyz(color.illuminance/color.point_y*color.point_x,color.illuminance,color.illuminance/color.point_y*(1-color.point_x-color.point_y))
 }
-@xyz_to_lab(xyz) {
-	if !is_xyz(xyz) {return Error:create('INVALID_ARGUMENT', {text: 'xyz is not CIE XYZ color type', callee: 'Color:xyz_to_lab'})}
+@xyz_to_lab(color) {
+	if !is_xyz(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not CIE XYZ color type', callee: 'Color:xyz_to_lab'})}
 	@p(v) { if v > Math:pow(6/29,3) {Math:pow(v,1/3)} else {Math:pow(6/29,2)*v/3+4/29}}
-	let wp = Color:srgb_to_xyz(Color:srgb(1,1,1))
-	return Color:lab(116*p(xyz.y/wp.y)-16,500*(p(xyz.x/wp.x)-p(xyz.y/wp.y)),200*(p(xyz.y/wp.y)-p(xyz.z/wp.z)))
+	let wp = Color:whitepoint()
+	return Color:lab(116*p(color.y/wp.y)-16,500*(p(color.x/wp.x)-p(color.y/wp.y)),200*(p(color.y/wp.y)-p(color.z/wp.z)))
 }
-@lab_to_xyz(lab) {
-	if !is_lab(lab) {return Error:create('INVALID_ARGUMENT', {text: 'lab is not CIE L*a*b* color type', callee: 'Color:lab_to_xyz'})}
-	@p(v,b) { if v > 6/29 {b*Math:pow(v,3)} else {(v-16/116)*3*Math:pos(6/29)*b} }
-	let wp = Color:srgb_to_xyz(Color:srgb(1,1,1))
-	return Color:xyz(p((lab.l_star+16)/116+lab.a_star/500,wp.x),p((lab.l_star+16)/116,wp.y),p((lab.l_star+16)/116-lab.b_star/200,wp.z))
+@lab_to_xyz(color) {
+	if !is_lab(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not CIE L*a*b* color type', callee: 'Color:lab_to_xyz'})}
+	@p(v,b) { if v > 6/29 {b*Math:pow(v,3)} else {(v-16/116)*3*Math:pow(6/29,2)*b} }
+	let wp = Color:whitepoint()
+	return Color:xyz(p((color.l_star+16)/116+color.a_star/500,wp.x),p((color.l_star+16)/116,wp.y),p((color.l_star+16)/116-color.b_star/200,wp.z))
 }
 }
