@@ -191,206 +191,172 @@
 }}
 @hexinput(iv) {
 	var value = if Core:type(Color:hex_to_srgb(iv))!='error' {iv} else {'000000'}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
 	@to_srgb() {if Core:type(Color:hex_to_srgb(value))!='error' {Color:hex_to_srgb(value)} else {Color:srgb(0,0,0)}}
-	@update_sample() {
-		sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`})
-	}
-	@update_form() {
-		input.update({default: value})
-	}
-	let input = Ui:C:textInput({label: tr().hexcolor(), default: value, onInput: @(v){
-		value = v
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { f.input.update({default: value}) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input: @(){Ui:C:textInput({label: tr().hexcolor(), default: value, onInput: @(v){
+			value = v
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){value}
 		set_value: @(v){ if Color:is_srgb(v) {
 			value = v
-			update_form()
-			update_sample()
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
 @srgbinput(iv) {
 	var value = if Color:is_srgb(iv) {iv} else {Color:srgb(0,0,0)}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
-	@update_sample() {
-		sample.update({bgColor: `rgb({value.red*100}%,{value.green*100}%,{value.blue*100}%)`})
-	}
-	@update_form() {
-		input_r.update({default: value.red*100})
-		input_g.update({default: value.green*100})
-		input_b.update({default: value.blue*100})
-	}
-	let input_r = Ui:C:numberInput({label: tr().srgb_r(), default: value.red*100, onInput: @(v){
-		value.red = v/100
-		update_sample()
-	}})
-	let input_g = Ui:C:numberInput({label: tr().srgb_g(), default: value.green*100, onInput: @(v){
-		value.green = v/100
-		update_sample()
-	}})
-	let input_b = Ui:C:numberInput({label: tr().srgb_b(), default: value.blue*100, onInput: @(v){
-		value.blue = v/100
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({value.red*100}%,{value.green*100}%,{value.blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_r.update({default: value.red*100})},@(){f.input_g.update({default: value.green*100})},@(){f.input_b.update({default: value.blue*100})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_r: @(){Ui:C:numberInput({label: tr().srgb_r(), default: value.red*100, onInput: @(v){
+			value.red = v/100
+			update_sample()
+		}})}
+		input_g: @(){Ui:C:numberInput({label: tr().srgb_g(), default: value.green*100, onInput: @(v){
+			value.green = v/100
+			update_sample()
+		}})}
+		input_b: @(){Ui:C:numberInput({label: tr().srgb_b(), default: value.blue*100, onInput: @(v){
+			value.blue = v/100
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input_r,input_g,input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input_r,f.input_g,f.input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){Obj:copy(value)}
 		set_value: @(v){ if Color:is_srgb(v) {
 			value = v
-			update_form()
-			update_sample()
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
 @hsvinput(iv) {
 	var value = if Color:is_hsv(iv) {iv} else {Color:hsv(0,0,0)}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
 	@to_srgb() {Color:hsv_to_srgb(value)}
-	@update_sample() {
-		sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`})
-	}
-	@update_form() {
-		input_h.update({default: value.hue})
-		input_s.update({default: value.saturation*100})
-		input_v.update({default: value.value*100})
-	}
-	let input_h = Ui:C:numberInput({label: tr().hsv_h(), default: value.hue, onInput: @(v){
-		value.hue = v%360
-		update_sample()
-	}})
-	let input_s = Ui:C:numberInput({label: tr().hsv_s(), default: value.saturation*100, onInput: @(v){
-		value.saturation = v/100
-		update_sample()
-	}})
-	let input_v = Ui:C:numberInput({label: tr().hsv_v(), default: value.value*100, onInput: @(v){
-		value.value = v/100
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_h.update({default: value.hue})},@(){f.input_s.update({default: value.saturation*100})},@(){f.input_v.update({default: value.value*100})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_h: @(){Ui:C:numberInput({label: tr().hsv_h(), default: value.hue, onInput: @(v){
+			value.hue = v%360
+			update_sample()
+		}})}
+		input_s: @(){Ui:C:numberInput({label: tr().hsv_s(), default: value.saturation*100, onInput: @(v){
+			value.saturation = v/100
+			update_sample()
+		}})}
+		input_v: @(){Ui:C:numberInput({label: tr().hsv_v(), default: value.value*100, onInput: @(v){
+			value.value = v/100
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input_h,input_s,input_v,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input_h,f.input_s,f.input_v,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){Obj:copy(value)}
 		set_value: @(v){ if Color:is_hsv(v) {
 			value = v
-			update_form()
-			update_sample()
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
 @ycbcrinput(iv) {
 	var value = if Color:is_ycbcr(iv) {iv} else {Color:ycbcr(0,0,0)}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
 	@to_srgb() {Color:ycbcr_to_srgb(value)}
-	@update_sample() {
-		sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`})
-	}
-	@update_form() {
-		input_y.update({default: value.illuminance*100})
-		input_b.update({default: value.cb*100})
-		input_r.update({default: value.cr*100})
-	}
-	let input_y = Ui:C:numberInput({label: tr().ycbcr_y(), default: value.illuminance*100, onInput: @(v){
-		value.illuminance = v/100
-		update_sample()
-	}})
-	let input_b = Ui:C:numberInput({label: tr().ycbcr_b(), default: value.cb*100, onInput: @(v){
-		value.cb = v/100
-		update_sample()
-	}})
-	let input_r = Ui:C:numberInput({label: tr().ycbcr_r(), default: value.cr*100, onInput: @(v){
-		value.cr = v/100
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_y.update({default: value.illuminance*100})},@(){f.input_b.update({default: value.cb*100})},@(){f.input_r.update({default: value.cr*100})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_y: @(){Ui:C:numberInput({label: tr().ycbcr_y(), default: value.illuminance*100, onInput: @(v){
+			value.illuminance = v/100
+			update_sample()
+		}})}
+		input_b: @(){Ui:C:numberInput({label: tr().ycbcr_b(), default: value.cb*100, onInput: @(v){
+			value.cb = v/100
+			update_sample()
+		}})}
+		input_r: @(){Ui:C:numberInput({label: tr().ycbcr_r(), default: value.cr*100, onInput: @(v){
+			value.cr = v/100
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input_y,input_b,input_r,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input_y,f.input_b,f.input_r,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){Obj:copy(value)}
 		set_value: @(v){ if Color:is_ycbcr(v) {
 			value = v
-			update_form()
-			update_sample()
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
 @xyyinput(iv) {
 	var value = if Color:is_xyy(iv) {iv} else {Color:xyy(0.3333,0.3333,0)}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
 	@to_srgb() {Color:xyz_to_srgb(Color:xyy_to_xyz(value))}
-	@update_sample() {
-		sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`})
-	}
-	@update_form() {
-		input_x.update({default: value.point_x*1000})
-		input_y.update({default: value.point_y*1000})
-		input_l.update({default: value.illuminance*100})
-	}
-	let input_x = Ui:C:numberInput({label: tr().xyy_x(), default: value.point_x*1000, onInput: @(v){
-		value.point_x = v/1000
-		update_sample()
-	}})
-	let input_y = Ui:C:numberInput({label: tr().xyy_y(), default: value.point_y*1000, onInput: @(v){
-		value.point_y = v/1000
-		update_sample()
-	}})
-	let input_l = Ui:C:numberInput({label: tr().xyy_l(), default: value.illuminance*100, onInput: @(v){
-		value.illuminance = v/100
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_x.update({default: value.point_x*1000})},@(){f.input_y.update({default: value.point_y*1000})},@(){f.input_l.update({default: value.illuminance*100})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_x: @(){Ui:C:numberInput({label: tr().xyy_x(), default: value.point_x*1000, onInput: @(v){
+			value.point_x = v/1000
+			update_sample()
+		}})}
+		input_y: @(){Ui:C:numberInput({label: tr().xyy_y(), default: value.point_y*1000, onInput: @(v){
+			value.point_y = v/1000
+			update_sample()
+		}})}
+		input_l: @(){Ui:C:numberInput({label: tr().xyy_l(), default: value.illuminance*100, onInput: @(v){
+			value.illuminance = v/100
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input_x,input_y,input_l,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input_x,f.input_y,f.input_l,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){Obj:copy(value)}
 		set_value: @(v){ if Color:is_xyy(v) {
 			value = v
-			update_form()
-			update_sample()
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
 @labinput(iv) {
 	var value = if Color:is_lab(iv) {iv} else {Color:lab(0,0,0)}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
 	@to_srgb() {Color:xyz_to_srgb(Color:lab_to_xyz(value))}
-	@update_sample() {
-		sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`})
-	}
-	@update_form() {
-		input_l.update({default: value.l_star})
-		input_a.update({default: value.a_star})
-		input_b.update({default: value.b_star})
-	}
-	let input_l = Ui:C:numberInput({label: tr().lab_l(), default: value.l_star, onInput: @(v){
-		value.l_star = v
-		update_sample()
-	}})
-	let input_a = Ui:C:numberInput({label: tr().lab_a(), default: value.a_star, onInput: @(v){
-		value.a_star = v
-		update_sample()
-	}})
-	let input_b = Ui:C:numberInput({label: tr().lab_b(), default: value.b_star, onInput: @(v){
-		value.b_star = v
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_l.update({default: value.l_star})},@(){f.input_a.update({default: value.a_star})},@(){f.input_b.update({default: value.b_star})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_l: @(){Ui:C:numberInput({label: tr().lab_l(), default: value.l_star, onInput: @(v){
+			value.l_star = v
+			update_sample()
+		}})}
+		input_a: @(){Ui:C:numberInput({label: tr().lab_a(), default: value.a_star, onInput: @(v){
+			value.a_star = v
+			update_sample()
+		}})}
+		input_b: @(){Ui:C:numberInput({label: tr().lab_b(), default: value.b_star, onInput: @(v){
+			value.b_star = v
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input_l,input_a,input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input_l,f.input_a,f.input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){Obj:copy(value)}
 		set_value: @(v){ if Color:is_lab(v) {
 			value = v
-			update_form()
-			update_sample()
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
