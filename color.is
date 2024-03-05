@@ -1,7 +1,7 @@
 // 0.17.0
 // color.is
 // 色空間の相互変換を行うライブラリ
-// version 1.0.1
+// version 1.0.2
 // Copyright 2024 zawa-ch. licensed under MIT License
 
 :: Color {
@@ -69,12 +69,12 @@
 		color.blue => 60*(color.green-color.red)/(max-min)+60
 		color.red => 60*(color.blue-color.green)/(max-min)+180
 		color.green => 60*(color.red-color.blue)/(max-min)+300
-	},(max-min)/2,max-min)
+	},(max+min)/2,if (max+min!=2)&&(max+min!=0) {(max-min)/(1-if (max+min)>=1 {(max+min)-1} else {1-max-min})} else {0})
 }
 @hls_to_srgb(color) {
 	if !is_hls(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not HLS color type', callee: 'Color:hls_to_srgb'})}
-	let min = color.lightness-color.saturation/2
-	let max = color.lightness+color.saturation/2
+	let min = color.lightness-color.saturation*(1-if color.lightness>=0.5 {2*color.lightness-1} else {1-2*color.lightness})/2
+	let max = color.lightness+color.saturation*(1-if color.lightness>=0.5 {2*color.lightness-1} else {1-2*color.lightness})/2
 	let h = color.hue%360
 	return match Math:trunc(h/60) {
 		0 => Color:srgb(max,min+(max-min)*h/60,min)
