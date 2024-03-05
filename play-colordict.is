@@ -507,7 +507,7 @@
 		'hex' => if Core:type(Color:hex_to_srgb(colorpicker.get_value()))!='error' {Color:hex_to_srgb(colorpicker.get_value())} else {Color:srgb(0,0,0)}
 		'srgb' => colorpicker.get_value()
 		'hsv' => Color:hsv_to_srgb(colorpicker.get_value())
-		'ycbcr' => olor:ycbcr_to_srgb(colorpicker.get_value())
+		'ycbcr' => Color:ycbcr_to_srgb(colorpicker.get_value())
 		'xyy' => Color:xyz_to_srgb(Color:xyy_to_xyz(colorpicker.get_value()))
 		'lab' => Color:xyz_to_srgb(Color:lab_to_xyz(colorpicker.get_value()))
 	}
