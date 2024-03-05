@@ -3,7 +3,7 @@
 	name: 'Color Dictionary'
 	author: 'zawa-ch.'
 	description: '色のサンプルとその要素'
-	version: '1.0.1'
+	version: '1.0.2'
 	license: {
 		name: "MIT License"
 		href: "http://www.opensource.org/licenses/mit-license.php"
@@ -12,7 +12,7 @@
 
 // color.is
 // 色空間の相互変換を行うライブラリ
-// version 1.0.1
+// version 1.0.2
 // Copyright 2024 zawa-ch. licensed under MIT License
 
 :: Color {
@@ -80,12 +80,12 @@
 		color.blue => 60*(color.green-color.red)/(max-min)+60
 		color.red => 60*(color.blue-color.green)/(max-min)+180
 		color.green => 60*(color.red-color.blue)/(max-min)+300
-	},(max-min)/2,max-min)
+	},(max+min)/2,if (max+min!=2)&&(max+min!=0) {(max-min)/(1-if (max+min)>=1 {(max+min)-1} else {1-max-min})} else {0})
 }
 @hls_to_srgb(color) {
 	if !is_hls(color) {return Error:create('INVALID_ARGUMENT', {text: 'color is not HLS color type', callee: 'Color:hls_to_srgb'})}
-	let min = color.lightness-color.saturation/2
-	let max = color.lightness+color.saturation/2
+	let min = color.lightness-color.saturation*(1-if color.lightness>=0.5 {2*color.lightness-1} else {1-2*color.lightness})/2
+	let max = color.lightness+color.saturation*(1-if color.lightness>=0.5 {2*color.lightness-1} else {1-2*color.lightness})/2
 	let h = color.hue%360
 	return match Math:trunc(h/60) {
 		0 => Color:srgb(max,min+(max-min)*h/60,min)
@@ -143,6 +143,17 @@
 }
 }
 
+@fast_construct(list) {
+	match Core:type(list) {
+		'obj' => Obj:kvs(list).map(@(i){ [i[0], i[1]()] }).reduce(@(b,c,i){
+			Obj:set(b,c[0],c[1])
+			b
+		},{})
+		'arr' => list.map(@(i){i()})
+		* => list
+	}
+}
+	
 @tr() {{
 	colorspace: @(){'色空間'}
 	sample: @(){'サンプル'}
@@ -155,6 +166,10 @@
 	hsv_h: @(){ '色相' }
 	hsv_s: @(){ '彩度' }
 	hsv_v: @(){ '明度' }
+	hlscolor: @(){'HLS'}
+	hls_h: @(){ '色相' }
+	hls_l: @(){ '輝度' }
+	hls_s: @(){ '彩度' }
 	ycbcrcolor: @(){'YCbCr'}
 	ycbcr_y: @(){ '輝度' }
 	ycbcr_b: @(){ '青色差' }
@@ -175,207 +190,203 @@
 	].join(Str:lf) }
 }}
 @hexinput(iv) {
-	var value = if Core:type(Color:hex_to_srgb(iv))!='error' {iv} else {'000000'}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
+	var value = if Core:type(Color:hex_to_srgb(iv))!='error' {iv} else {''}
 	@to_srgb() {if Core:type(Color:hex_to_srgb(value))!='error' {Color:hex_to_srgb(value)} else {Color:srgb(0,0,0)}}
-	@update_sample() {
-		sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`})
-	}
-	@update_form() {
-		input.update({default: value})
-	}
-	let input = Ui:C:textInput({label: tr().hexcolor(), default: value, onInput: @(v){
-		value = v
-		update_sample()
-	}})
-	update_form()
-	update_sample()
-	{
-		form: Ui:C:container({children: [input,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
-		get_value: @(){value}
-		set_value: @(v){ if Color:is_srgb(v) {
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { f.input.update({default: value}) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input: @(){Ui:C:textInput({label: tr().hexcolor(), default: value, onInput: @(v){
 			value = v
-			update_form()
 			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
+	{
+		form: Ui:C:container({children: [f.input,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
+		get_value: @(){value}
+		set_value: @(v){ if Core:type(Color:hex_to_srgb(v))!='error' {
+			value = v
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
 @srgbinput(iv) {
 	var value = if Color:is_srgb(iv) {iv} else {Color:srgb(0,0,0)}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
-	@update_sample() {
-		sample.update({bgColor: `rgb({value.red*100}%,{value.green*100}%,{value.blue*100}%)`})
-	}
-	@update_form() {
-		input_r.update({default: value.red*100})
-		input_g.update({default: value.green*100})
-		input_b.update({default: value.blue*100})
-	}
-	let input_r = Ui:C:numberInput({label: tr().srgb_r(), default: value.red*100, onInput: @(v){
-		value.red = v/100
-		update_sample()
-	}})
-	let input_g = Ui:C:numberInput({label: tr().srgb_g(), default: value.green*100, onInput: @(v){
-		value.green = v/100
-		update_sample()
-	}})
-	let input_b = Ui:C:numberInput({label: tr().srgb_b(), default: value.blue*100, onInput: @(v){
-		value.blue = v/100
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({value.red*100}%,{value.green*100}%,{value.blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_r.update({default: value.red*100})},@(){f.input_g.update({default: value.green*100})},@(){f.input_b.update({default: value.blue*100})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_r: @(){Ui:C:numberInput({label: tr().srgb_r(), default: value.red*100, onInput: @(v){
+			value.red = v/100
+			update_sample()
+		}})}
+		input_g: @(){Ui:C:numberInput({label: tr().srgb_g(), default: value.green*100, onInput: @(v){
+			value.green = v/100
+			update_sample()
+		}})}
+		input_b: @(){Ui:C:numberInput({label: tr().srgb_b(), default: value.blue*100, onInput: @(v){
+			value.blue = v/100
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input_r,input_g,input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input_r,f.input_g,f.input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){Obj:copy(value)}
 		set_value: @(v){ if Color:is_srgb(v) {
 			value = v
-			update_form()
-			update_sample()
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
 @hsvinput(iv) {
 	var value = if Color:is_hsv(iv) {iv} else {Color:hsv(0,0,0)}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
 	@to_srgb() {Color:hsv_to_srgb(value)}
-	@update_sample() {
-		sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`})
-	}
-	@update_form() {
-		input_h.update({default: value.hue})
-		input_s.update({default: value.saturation*100})
-		input_v.update({default: value.value*100})
-	}
-	let input_h = Ui:C:numberInput({label: tr().hsv_h(), default: value.hue, onInput: @(v){
-		value.hue = v%360
-		update_sample()
-	}})
-	let input_s = Ui:C:numberInput({label: tr().hsv_s(), default: value.saturation*100, onInput: @(v){
-		value.saturation = v/100
-		update_sample()
-	}})
-	let input_v = Ui:C:numberInput({label: tr().hsv_v(), default: value.value*100, onInput: @(v){
-		value.value = v/100
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_h.update({default: value.hue})},@(){f.input_s.update({default: value.saturation*100})},@(){f.input_v.update({default: value.value*100})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_h: @(){Ui:C:numberInput({label: tr().hsv_h(), default: value.hue, onInput: @(v){
+			value.hue = v%360
+			update_sample()
+		}})}
+		input_s: @(){Ui:C:numberInput({label: tr().hsv_s(), default: value.saturation*100, onInput: @(v){
+			value.saturation = v/100
+			update_sample()
+		}})}
+		input_v: @(){Ui:C:numberInput({label: tr().hsv_v(), default: value.value*100, onInput: @(v){
+			value.value = v/100
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input_h,input_s,input_v,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input_h,f.input_s,f.input_v,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){Obj:copy(value)}
 		set_value: @(v){ if Color:is_hsv(v) {
 			value = v
-			update_form()
+			fast_construct([update_form, update_sample])
+		} }
+	}
+}
+@hlsinput(iv) {
+	var value = if Color:is_hls(iv) {iv} else {Color:hls(0,0,0)}
+	@to_srgb() {Color:hls_to_srgb(value)}
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_h.update({default: value.hue})},@(){f.input_l.update({default: value.lightness*100})},@(){f.input_s.update({default: value.saturation*100})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_h: @(){Ui:C:numberInput({label: tr().hls_h(), default: value.hue, onInput: @(v){
+			value.hue = v%360
 			update_sample()
+		}})}
+		input_l: @(){Ui:C:numberInput({label: tr().hls_l(), default: value.lightness*100, onInput: @(v){
+			value.lightness = v/100
+			update_sample()
+		}})}
+		input_s: @(){Ui:C:numberInput({label: tr().hls_s(), default: value.saturation*100, onInput: @(v){
+			value.saturation = v/100
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
+	{
+		form: Ui:C:container({children: [f.input_h,f.input_l,f.input_s,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
+		get_value: @(){Obj:copy(value)}
+		set_value: @(v){ if Color:is_hsv(v) {
+			value = v
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
 @ycbcrinput(iv) {
 	var value = if Color:is_ycbcr(iv) {iv} else {Color:ycbcr(0,0,0)}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
 	@to_srgb() {Color:ycbcr_to_srgb(value)}
-	@update_sample() {
-		sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`})
-	}
-	@update_form() {
-		input_y.update({default: value.illuminance*100})
-		input_b.update({default: value.cb*100})
-		input_r.update({default: value.cr*100})
-	}
-	let input_y = Ui:C:numberInput({label: tr().ycbcr_y(), default: value.illuminance*100, onInput: @(v){
-		value.illuminance = v/100
-		update_sample()
-	}})
-	let input_b = Ui:C:numberInput({label: tr().ycbcr_b(), default: value.cb*100, onInput: @(v){
-		value.cb = v/100
-		update_sample()
-	}})
-	let input_r = Ui:C:numberInput({label: tr().ycbcr_r(), default: value.cr*100, onInput: @(v){
-		value.cr = v/100
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_y.update({default: value.illuminance*100})},@(){f.input_b.update({default: value.cb*100})},@(){f.input_r.update({default: value.cr*100})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_y: @(){Ui:C:numberInput({label: tr().ycbcr_y(), default: value.illuminance*100, onInput: @(v){
+			value.illuminance = v/100
+			update_sample()
+		}})}
+		input_b: @(){Ui:C:numberInput({label: tr().ycbcr_b(), default: value.cb*100, onInput: @(v){
+			value.cb = v/100
+			update_sample()
+		}})}
+		input_r: @(){Ui:C:numberInput({label: tr().ycbcr_r(), default: value.cr*100, onInput: @(v){
+			value.cr = v/100
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input_y,input_b,input_r,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input_y,f.input_b,f.input_r,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){Obj:copy(value)}
 		set_value: @(v){ if Color:is_ycbcr(v) {
 			value = v
-			update_form()
-			update_sample()
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
 @xyyinput(iv) {
 	var value = if Color:is_xyy(iv) {iv} else {Color:xyy(0.3333,0.3333,0)}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
 	@to_srgb() {Color:xyz_to_srgb(Color:xyy_to_xyz(value))}
-	@update_sample() {
-		sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`})
-	}
-	@update_form() {
-		input_x.update({default: value.point_x*1000})
-		input_y.update({default: value.point_y*1000})
-		input_l.update({default: value.illuminance*100})
-	}
-	let input_x = Ui:C:numberInput({label: tr().xyy_x(), default: value.point_x*1000, onInput: @(v){
-		value.point_x = v/1000
-		update_sample()
-	}})
-	let input_y = Ui:C:numberInput({label: tr().xyy_y(), default: value.point_y*1000, onInput: @(v){
-		value.point_y = v/1000
-		update_sample()
-	}})
-	let input_l = Ui:C:numberInput({label: tr().xyy_l(), default: value.illuminance*100, onInput: @(v){
-		value.illuminance = v/100
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_x.update({default: value.point_x*1000})},@(){f.input_y.update({default: value.point_y*1000})},@(){f.input_l.update({default: value.illuminance*100})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_x: @(){Ui:C:numberInput({label: tr().xyy_x(), default: value.point_x*1000, onInput: @(v){
+			value.point_x = v/1000
+			update_sample()
+		}})}
+		input_y: @(){Ui:C:numberInput({label: tr().xyy_y(), default: value.point_y*1000, onInput: @(v){
+			value.point_y = v/1000
+			update_sample()
+		}})}
+		input_l: @(){Ui:C:numberInput({label: tr().xyy_l(), default: value.illuminance*100, onInput: @(v){
+			value.illuminance = v/100
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input_x,input_y,input_l,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input_x,f.input_y,f.input_l,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){Obj:copy(value)}
 		set_value: @(v){ if Color:is_xyy(v) {
 			value = v
-			update_form()
-			update_sample()
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
 @labinput(iv) {
 	var value = if Color:is_lab(iv) {iv} else {Color:lab(0,0,0)}
-	let sample = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
 	@to_srgb() {Color:xyz_to_srgb(Color:lab_to_xyz(value))}
-	@update_sample() {
-		sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`})
-	}
-	@update_form() {
-		input_l.update({default: value.l_star})
-		input_a.update({default: value.a_star})
-		input_b.update({default: value.b_star})
-	}
-	let input_l = Ui:C:numberInput({label: tr().lab_l(), default: value.l_star, onInput: @(v){
-		value.l_star = v
-		update_sample()
-	}})
-	let input_a = Ui:C:numberInput({label: tr().lab_a(), default: value.a_star, onInput: @(v){
-		value.a_star = v
-		update_sample()
-	}})
-	let input_b = Ui:C:numberInput({label: tr().lab_b(), default: value.b_star, onInput: @(v){
-		value.b_star = v
-		update_sample()
-	}})
-	update_form()
-	update_sample()
+	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
+	@update_form() { fast_construct([@(){f.input_l.update({default: value.l_star})},@(){f.input_a.update({default: value.a_star})},@(){f.input_b.update({default: value.b_star})}]) }
+	let f = fast_construct({
+		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
+		input_l: @(){Ui:C:numberInput({label: tr().lab_l(), default: value.l_star, onInput: @(v){
+			value.l_star = v
+			update_sample()
+		}})}
+		input_a: @(){Ui:C:numberInput({label: tr().lab_a(), default: value.a_star, onInput: @(v){
+			value.a_star = v
+			update_sample()
+		}})}
+		input_b: @(){Ui:C:numberInput({label: tr().lab_b(), default: value.b_star, onInput: @(v){
+			value.b_star = v
+			update_sample()
+		}})}
+	})
+	fast_construct([update_form, update_sample])
 	{
-		form: Ui:C:container({children: [input_l,input_a,input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),sample]})]})
+		form: Ui:C:container({children: [f.input_l,f.input_a,f.input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){Obj:copy(value)}
 		set_value: @(v){ if Color:is_lab(v) {
 			value = v
-			update_form()
-			update_sample()
+			fast_construct([update_form, update_sample])
 		} }
 	}
 }
@@ -390,82 +401,112 @@
 		Math:round(num).to_str()
 	}
 }
-@construct_sample(name,lab) {
-	let color_lab = lab
-	let color_xyy = Color:xyz_to_xyy(Color:lab_to_xyz(color_lab))
-	let color_srgb = Color:xyz_to_srgb(Color:lab_to_xyz(color_lab))
-	let color_ycbcr = Color:srgb_to_ycbcr(color_srgb)
-	let color_hsv = Color:srgb_to_hsv(color_srgb)
-	let color_hex = Color:srgb_to_hex24(color_srgb)
+@construct_sample(name,srgb) {
 	let wp = Color:whitepoint()
-	let bright_color = Color:lab_to_xyz(color_lab).y>0.5
-	let lab_l_bg = Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(color_lab.l_star,0,0)))
-	let lab_a_bg = Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(color_lab.l_star,color_lab.a_star,0)))
-	let lab_b_bg = Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(color_lab.l_star,0,color_lab.b_star)))
-	let xyy_x_bg = Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(color_xyy.point_x,Color:xyz_to_xyy(wp).point_y,color_xyy.illuminance)))
-	let xyy_y_bg = Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(Color:xyz_to_xyy(wp).point_x,color_xyy.point_y,color_xyy.illuminance)))
-	let xyy_l_bg = Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(Color:xyz_to_xyy(wp).point_x,Color:xyz_to_xyy(wp).point_y,color_xyy.illuminance)))
-	let rgb_r_bg = Color:srgb(color_srgb.red,0,0)
-	let rgb_r_bg_bright = Color:srgb_to_xyz(rgb_r_bg).y>0.5
-	let rgb_g_bg = Color:srgb(0,color_srgb.green,0)
-	let rgb_g_bg_bright = Color:srgb_to_xyz(rgb_g_bg).y>0.5
-	let rgb_b_bg = Color:srgb(0,0,color_srgb.blue)
-	let rgb_b_bg_bright = Color:srgb_to_xyz(rgb_b_bg).y>0.5
-	let ybr_y_bg = Color:ycbcr_to_srgb(Color:ycbcr(color_ycbcr.illuminance,0,0))
-	let ybr_b_bg = Color:ycbcr_to_srgb(Color:ycbcr(color_ycbcr.illuminance,color_ycbcr.cb,0))
-	let ybr_r_bg = Color:ycbcr_to_srgb(Color:ycbcr(color_ycbcr.illuminance,0,color_ycbcr.cr))
-	let hsv_h_bg = Color:hsv_to_srgb(Color:hsv(color_hsv.hue,1,1))
-	let hsv_h_bg_bright = Color:srgb_to_xyz(hsv_h_bg).y>0.5
-	let hsv_s_bg = Color:hsv_to_srgb(Color:hsv(color_hsv.hue,color_hsv.saturation,1))
-	let hsv_s_bg_bright = Color:srgb_to_xyz(hsv_s_bg).y>0.5
-	let hsv_v_bg = Color:hsv_to_srgb(Color:hsv(0,0,color_hsv.value))
-	let hsv_v_bg_bright = Color:srgb_to_xyz(hsv_v_bg).y>0.5
-	Ui:C:container({children: [
-		Ui:C:container({bgColor: `rgb({color_srgb.red*100}%,{color_srgb.green*100}%,{color_srgb.blue*100}%)`, padding: 8, children: [
-			Ui:C:mfm({text: name, color: if bright_color {'#000'} else {'#FFF'}, size: 2}),
-			Ui:C:text({text: `#{color_hex}`, color: if bright_color {'#000'} else {'#FFF'}, size: 0.8}),
-		]}),
-		Ui:C:container({children: [
+	let color = fast_construct({
+		srgb: @() { srgb }
+		hex: @() { Color:srgb_to_hex24(srgb) }
+		hsv: @() { Color:srgb_to_hsv(srgb) }
+		hls: @() { Color:srgb_to_hls(srgb) }
+		ycbcr: @() { Color:srgb_to_ycbcr(srgb) }
+		xyy: @() { Color:xyz_to_xyy(Color:srgb_to_xyz(srgb)) }
+		lab: @() { Color:xyz_to_lab(Color:srgb_to_xyz(srgb)) }
+	})
+	let bg = fast_construct({
+		is_bright: @() { color.xyy.illuminance>0.5 }
+		lab: @(){ fast_construct({
+			l: @(){ Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(color.lab.l_star,0,0))) }
+			a: @(){ Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(color.lab.l_star,color.lab.a_star,0))) }
+			b: @(){ Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(color.lab.l_star,0,color.lab.b_star))) }
+		}) }
+		xyy: @(){ fast_construct({
+			x: @(){ Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(color.xyy.point_x,Color:xyz_to_xyy(wp).point_y,color.xyy.illuminance))) }
+			y: @(){ Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(Color:xyz_to_xyy(wp).point_x,color.xyy.point_y,color.xyy.illuminance))) }
+			l: @(){ Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(Color:xyz_to_xyy(wp).point_x,Color:xyz_to_xyy(wp).point_y,color.xyy.illuminance))) }
+		}) }
+		rgb: @(){ fast_construct({
+			r: @(){ Color:srgb(color.srgb.red,0,0) }
+			r_is_bright: @(){ Color:srgb_to_xyz(Color:srgb(color.srgb.red,0,0)).y>0.5 }
+			g: @(){ Color:srgb(0,color.srgb.green,0) }
+			g_is_bright: @(){ Color:srgb_to_xyz(Color:srgb(0,color.srgb.green,0)).y>0.5 }
+			b: @(){ Color:srgb(0,0,color.srgb.blue) }
+			b_is_bright: @(){ Color:srgb_to_xyz(Color:srgb(0,0,color.srgb.blue)).y>0.5 }
+		}) }
+		ybr: @(){ fast_construct({
+			y: @(){ Color:ycbcr_to_srgb(Color:ycbcr(color.ycbcr.illuminance,0,0)) }
+			b: @(){ Color:ycbcr_to_srgb(Color:ycbcr(color.ycbcr.illuminance,color.ycbcr.cb,0)) }
+			r: @(){ Color:ycbcr_to_srgb(Color:ycbcr(color.ycbcr.illuminance,0,color.ycbcr.cr)) }
+		}) }
+		hsv: @(){ fast_construct({
+			h: @(){ Color:hsv_to_srgb(Color:hsv(color.hsv.hue,1,1)) }
+			h_is_bright: @(){ Color:srgb_to_xyz(Color:hsv_to_srgb(Color:hsv(color.hsv.hue,1,1))).y>0.5 }
+			s: @(){ Color:hsv_to_srgb(Color:hsv(color.hsv.hue,color.hsv.saturation,1)) }
+			s_is_bright: @(){ Color:srgb_to_xyz(Color:hsv_to_srgb(Color:hsv(color.hsv.hue,color.hsv.saturation,1))).y>0.5 }
+			v: @(){ Color:hsv_to_srgb(Color:hsv(0,0,color.hsv.value)) }
+			v_is_bright: @(){ Color:srgb_to_xyz(Color:hsv_to_srgb(Color:hsv(0,0,color.hsv.value))).y>0.5 }
+		}) }
+		hls: @(){ fast_construct({
+			h: @(){ Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,1)) }
+			h_is_bright: @(){ Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,1))).y>0.5 }
+			l: @(){ Color:hls_to_srgb(Color:hls(0,color.hls.lightness,0)) }
+			l_is_bright: @(){ Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(0,color.hls.lightness,0))).y>0.5 }
+			s: @(){ Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,color.hls.saturation)) }
+			s_is_bright: @(){ Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,color.hls.saturation))).y>0.5 }
+		}) }
+	})
+	Ui:C:container({children: fast_construct([
+		@(){ Ui:C:container({bgColor: `rgb({color.srgb.red*100}%,{color.srgb.green*100}%,{color.srgb.blue*100}%)`, padding: 8, children: [
+			Ui:C:mfm({text: name, color: if bg.is_bright {'#000'} else {'#FFF'}, size: 2}),
+			Ui:C:text({text: `#{color.hex}`, color: if bg.is_bright {'#000'} else {'#FFF'}, size: if name.len>0 {0.8} else {2} }),
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().srgbcolor()}),
-			Ui:C:container({bgColor: `rgb({rgb_r_bg.red*100}%,{rgb_r_bg.green*100}%,{rgb_r_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_r()}: {round_str(color_srgb.red,3)}`, color: if rgb_r_bg_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({rgb_g_bg.red*100}%,{rgb_g_bg.green*100}%,{rgb_g_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_g()}: {round_str(color_srgb.green,3)}`, color: if rgb_g_bg_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({rgb_b_bg.red*100}%,{rgb_b_bg.green*100}%,{rgb_b_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_b()}: {round_str(color_srgb.blue,3)}`, color: if rgb_b_bg_bright {'#000'} else {'#FFF'}})]}),
-		]}),
-		Ui:C:container({children: [
+			Ui:C:container({bgColor: `rgb({bg.rgb.r.red*100}%,{bg.rgb.r.green*100}%,{bg.rgb.r.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_r()}: {round_str(color.srgb.red,3)}`, color: if bg.rgb.r_is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.rgb.g.red*100}%,{bg.rgb.g.green*100}%,{bg.rgb.g.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_g()}: {round_str(color.srgb.green,3)}`, color: if bg.rgb.g_is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.rgb.b.red*100}%,{bg.rgb.b.green*100}%,{bg.rgb.b.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_b()}: {round_str(color.srgb.blue,3)}`, color: if bg.rgb.b_is_bright {'#000'} else {'#FFF'}})]}),
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().hsvcolor()}),
-			Ui:C:container({bgColor: `rgb({hsv_h_bg.red*100}%,{hsv_h_bg.green*100}%,{hsv_h_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_h()}: {round_str(color_hsv.hue,1)} degree`, color: if hsv_h_bg_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({hsv_s_bg.red*100}%,{hsv_s_bg.green*100}%,{hsv_s_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_s()}: {round_str(color_hsv.saturation,3)}`, color: if hsv_s_bg_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({hsv_v_bg.red*100}%,{hsv_v_bg.green*100}%,{hsv_v_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_v()}: {round_str(color_hsv.value,3)}`, color: if hsv_v_bg_bright {'#000'} else {'#FFF'}})]}),
-		]}),
-		Ui:C:container({children: [
+			Ui:C:container({bgColor: `rgb({bg.hsv.h.red*100}%,{bg.hsv.h.green*100}%,{bg.hsv.h.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_h()}: {round_str(color.hsv.hue,1)} degree`, color: if bg.hsv.h_is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.hsv.s.red*100}%,{bg.hsv.s.green*100}%,{bg.hsv.s.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_s()}: {round_str(color.hsv.saturation,3)}`, color: if bg.hsv.s_is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.hsv.v.red*100}%,{bg.hsv.v.green*100}%,{bg.hsv.v.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_v()}: {round_str(color.hsv.value,3)}`, color: if bg.hsv.v_is_bright {'#000'} else {'#FFF'}})]}),
+		]}) }
+		@(){ Ui:C:container({children: [
+			Ui:C:text({text: tr().hlscolor()}),
+			Ui:C:container({bgColor: `rgb({bg.hls.h.red*100}%,{bg.hls.h.green*100}%,{bg.hls.h.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_h()}: {round_str(color.hls.hue,1)} degree`, color: if bg.hls.h_is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.hls.l.red*100}%,{bg.hls.l.green*100}%,{bg.hls.l.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_l()}: {round_str(color.hls.lightness,3)}`, color: if bg.hls.l_is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.hls.s.red*100}%,{bg.hls.s.green*100}%,{bg.hls.s.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_s()}: {round_str(color.hls.saturation,3)}`, color: if bg.hls.s_is_bright {'#000'} else {'#FFF'}})]}),
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().ycbcrcolor()}),
-			Ui:C:container({bgColor: `rgb({ybr_y_bg.red*100}%,{ybr_y_bg.green*100}%,{ybr_y_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_y()}: {round_str(color_ycbcr.illuminance,3)}`, color: if bright_color {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({ybr_b_bg.red*100}%,{ybr_b_bg.green*100}%,{ybr_b_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_b()}: {round_str(color_ycbcr.cb,3)}`, color: if bright_color {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({ybr_r_bg.red*100}%,{ybr_r_bg.green*100}%,{ybr_r_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_r()}: {round_str(color_ycbcr.cr,3)}`, color: if bright_color {'#000'} else {'#FFF'}})]}),
-		]}),
-		Ui:C:container({children: [
+			Ui:C:container({bgColor: `rgb({bg.ybr.y.red*100}%,{bg.ybr.y.green*100}%,{bg.ybr.y.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_y()}: {round_str(color.ycbcr.illuminance,3)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.ybr.b.red*100}%,{bg.ybr.b.green*100}%,{bg.ybr.b.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_b()}: {round_str(color.ycbcr.cb,3)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.ybr.r.red*100}%,{bg.ybr.r.green*100}%,{bg.ybr.r.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_r()}: {round_str(color.ycbcr.cr,3)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().xyycolor()}),
-			Ui:C:container({bgColor: `rgb({xyy_x_bg.red*100}%,{xyy_x_bg.green*100}%,{xyy_x_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_x()}: {round_str(color_xyy.point_x,4)}`, color: if bright_color {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({xyy_y_bg.red*100}%,{xyy_y_bg.green*100}%,{xyy_y_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_y()}: {round_str(color_xyy.point_y,4)}`, color: if bright_color {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({xyy_l_bg.red*100}%,{xyy_l_bg.green*100}%,{xyy_l_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_l()}: {round_str(color_xyy.illuminance,4)}`, color: if bright_color {'#000'} else {'#FFF'}})]}),
-		]}),
-		Ui:C:container({children: [
+			Ui:C:container({bgColor: `rgb({bg.xyy.x.red*100}%,{bg.xyy.x.green*100}%,{bg.xyy.x.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_x()}: {round_str(color.xyy.point_x,4)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.xyy.y.red*100}%,{bg.xyy.y.green*100}%,{bg.xyy.y.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_y()}: {round_str(color.xyy.point_y,4)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.xyy.l.red*100}%,{bg.xyy.l.green*100}%,{bg.xyy.l.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_l()}: {round_str(color.xyy.illuminance,4)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().labcolor()}),
-			Ui:C:container({bgColor: `rgb({lab_l_bg.red*100}%,{lab_l_bg.green*100}%,{lab_l_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_l()}: {round_str(color_lab.l_star,2)}`, color: if bright_color {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({lab_a_bg.red*100}%,{lab_a_bg.green*100}%,{lab_a_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_a()}: {round_str(color_lab.a_star,2)}`, color: if bright_color {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({lab_b_bg.red*100}%,{lab_b_bg.green*100}%,{lab_b_bg.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_b()}: {round_str(color_lab.b_star,2)}`, color: if bright_color {'#000'} else {'#FFF'}})]}),
-		]}),
-	]})
+			Ui:C:container({bgColor: `rgb({bg.lab.l.red*100}%,{bg.lab.l.green*100}%,{bg.lab.l.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_l()}: {round_str(color.lab.l_star,2)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.lab.a.red*100}%,{bg.lab.a.green*100}%,{bg.lab.a.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_a()}: {round_str(color.lab.a_star,2)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.lab.b.red*100}%,{bg.lab.b.green*100}%,{bg.lab.b.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_b()}: {round_str(color.lab.b_star,2)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
+		]}) }
+	])})
 }
 
-@to_lab() {
+@to_srgb() {
 	match colorspace {
-		'hex' => if Core:type(Color:hex_to_srgb(colorpicker.get_value()))!='error' {Color:xyz_to_lab(Color:srgb_to_xyz(Color:hex_to_srgb(colorpicker.get_value())))} else {Color:lab(0,0,0,0)}
-		'srgb' => Color:xyz_to_lab(Color:srgb_to_xyz(colorpicker.get_value()))
-		'hsv' => Color:xyz_to_lab(Color:srgb_to_xyz(Color:hsv_to_srgb(colorpicker.get_value())))
-		'ycbcr' => Color:xyz_to_lab(Color:srgb_to_xyz(Color:ycbcr_to_srgb(colorpicker.get_value())))
-		'xyy' => Color:xyz_to_lab(Color:xyy_to_xyz(colorpicker.get_value()))
-		'lab' => colorpicker.get_value()
+		'hex' => if Core:type(Color:hex_to_srgb(colorpicker.get_value()))!='error' {Color:hex_to_srgb(colorpicker.get_value())} else {Color:srgb(0,0,0)}
+		'srgb' => colorpicker.get_value()
+		'hsv' => Color:hsv_to_srgb(colorpicker.get_value())
+		'hls' => Color:hls_to_srgb(colorpicker.get_value())
+		'ycbcr' => Color:ycbcr_to_srgb(colorpicker.get_value())
+		'xyy' => Color:xyz_to_srgb(Color:xyy_to_xyz(colorpicker.get_value()))
+		'lab' => Color:xyz_to_srgb(Color:lab_to_xyz(colorpicker.get_value()))
 	}
 }
 @render_picker() {
@@ -474,17 +515,19 @@
 }
 @render_sample() {
 	submitbutton.update({disabled: true})
-	Ui:render([backbutton,construct_sample('', to_lab())])
+	colorpicker.set_value(colorpicker.get_value())
+	Ui:render([backbutton,construct_sample('', to_srgb())])
 	submitbutton.update({disabled: false})
 }
 @update_colorspace(sp) {
 	match sp {
-		'hex' => colorpicker = hexinput(Color:srgb_to_hex24(Color:xyz_to_srgb(Color:lab_to_xyz(to_lab()))))
-		'srgb' => colorpicker = srgbinput(Color:xyz_to_srgb(Color:lab_to_xyz(to_lab())))
-		'hsv' => colorpicker = hsvinput(Color:srgb_to_hsv(Color:xyz_to_srgb(Color:lab_to_xyz(to_lab()))))
-		'ycbcr' => colorpicker = ycbcrinput(Color:srgb_to_ycbcr(Color:xyz_to_srgb(Color:lab_to_xyz(to_lab()))))
-		'xyy' => colorpicker = xyyinput(Color:xyz_to_xyy(Color:lab_to_xyz(to_lab())))
-		'lab' => colorpicker = labinput(to_lab())
+		'hex' => colorpicker = hexinput(Color:srgb_to_hex24(to_srgb()))
+		'srgb' => colorpicker = srgbinput(to_srgb())
+		'hsv' => colorpicker = hsvinput(Color:srgb_to_hsv(to_srgb()))
+		'hls' => colorpicker = hlsinput(Color:srgb_to_hls(to_srgb()))
+		'ycbcr' => colorpicker = ycbcrinput(Color:srgb_to_ycbcr(to_srgb()))
+		'xyy' => colorpicker = xyyinput(Color:xyz_to_xyy(Color:srgb_to_xyz(to_srgb())))
+		'lab' => colorpicker = labinput(Color:xyz_to_lab(Color:srgb_to_xyz(to_srgb())))
 	}
 	colorspace = sp
 	render_picker()
@@ -497,6 +540,7 @@ let colorspaceselect = Ui:C:select({
 		{text: tr().hexcolor(), value: 'hex'},
 		{text: tr().srgbcolor(), value: 'srgb'},
 		{text: tr().hsvcolor(), value: 'hsv'},
+		{text: tr().hlscolor(), value: 'hls'},
 		{text: tr().ycbcrcolor(), value: 'ycbcr'},
 		{text: tr().xyycolor(), value: 'xyy'},
 		{text: tr().labcolor(), value: 'lab'},
