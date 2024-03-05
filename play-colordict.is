@@ -515,6 +515,7 @@
 }
 @render_sample() {
 	submitbutton.update({disabled: true})
+	colorpicker.set_value(colorpicker.get_value())
 	Ui:render([backbutton,construct_sample('', to_srgb())])
 	submitbutton.update({disabled: false})
 }
