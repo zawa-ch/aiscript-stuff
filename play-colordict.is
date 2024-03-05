@@ -166,6 +166,10 @@
 	hsv_h: @(){ '色相' }
 	hsv_s: @(){ '彩度' }
 	hsv_v: @(){ '明度' }
+	hlscolor: @(){'HLS'}
+	hls_h: @(){ '色相' }
+	hls_l: @(){ '輝度' }
+	hls_s: @(){ '彩度' }
 	ycbcrcolor: @(){'YCbCr'}
 	ycbcr_y: @(){ '輝度' }
 	ycbcr_b: @(){ '青色差' }
@@ -407,6 +411,7 @@
 		srgb: @() { srgb }
 		hex: @() { Color:srgb_to_hex24(srgb) }
 		hsv: @() { Color:srgb_to_hsv(srgb) }
+		hls: @() { Color:srgb_to_hls(srgb) }
 		ycbcr: @() { Color:srgb_to_ycbcr(srgb) }
 		xyy: @() { Color:xyz_to_xyy(Color:srgb_to_xyz(srgb)) }
 		lab: @() { Color:xyz_to_lab(Color:srgb_to_xyz(srgb)) }
@@ -444,6 +449,14 @@
 			v: @(){ Color:hsv_to_srgb(Color:hsv(0,0,color.hsv.value)) }
 			v_is_bright: @(){ Color:srgb_to_xyz(Color:hsv_to_srgb(Color:hsv(0,0,color.hsv.value))).y>0.5 }
 		}) }
+		hls: @(){ fast_construct({
+			h: @(){ Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,1)) }
+			h_is_bright: @(){ Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,1))).y>0.5 }
+			l: @(){ Color:hls_to_srgb(Color:hls(0,color.hls.lightness,0)) }
+			l_is_bright: @(){ Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(0,color.hls.lightness,0))).y>0.5 }
+			s: @(){ Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,color.hls.saturation)) }
+			s_is_bright: @(){ Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,color.hls.saturation))).y>0.5 }
+		}) }
 	})
 	Ui:C:container({children: [
 		Ui:C:container({bgColor: `rgb({color.srgb.red*100}%,{color.srgb.green*100}%,{color.srgb.blue*100}%)`, padding: 8, children: [
@@ -461,6 +474,12 @@
 			Ui:C:container({bgColor: `rgb({bg.hsv.h.red*100}%,{bg.hsv.h.green*100}%,{bg.hsv.h.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_h()}: {round_str(color.hsv.hue,1)} degree`, color: if bg.hsv.h_is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.hsv.s.red*100}%,{bg.hsv.s.green*100}%,{bg.hsv.s.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_s()}: {round_str(color.hsv.saturation,3)}`, color: if bg.hsv.s_is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.hsv.v.red*100}%,{bg.hsv.v.green*100}%,{bg.hsv.v.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_v()}: {round_str(color.hsv.value,3)}`, color: if bg.hsv.v_is_bright {'#000'} else {'#FFF'}})]}),
+		]}),
+		Ui:C:container({children: [
+			Ui:C:text({text: tr().hlscolor()}),
+			Ui:C:container({bgColor: `rgb({bg.hls.h.red*100}%,{bg.hls.h.green*100}%,{bg.hls.h.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_h()}: {round_str(color.hls.hue,1)} degree`, color: if bg.hls.h_is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.hls.l.red*100}%,{bg.hls.l.green*100}%,{bg.hls.l.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_l()}: {round_str(color.hls.lightness,3)}`, color: if bg.hls.l_is_bright {'#000'} else {'#FFF'}})]}),
+			Ui:C:container({bgColor: `rgb({bg.hls.s.red*100}%,{bg.hls.s.green*100}%,{bg.hls.s.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_s()}: {round_str(color.hls.saturation,3)}`, color: if bg.hls.s_is_bright {'#000'} else {'#FFF'}})]}),
 		]}),
 		Ui:C:container({children: [
 			Ui:C:text({text: tr().ycbcrcolor()}),
