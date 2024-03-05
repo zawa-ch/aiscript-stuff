@@ -454,48 +454,48 @@
 			s_is_bright: @(){ Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,color.hls.saturation))).y>0.5 }
 		}) }
 	})
-	Ui:C:container({children: [
-		Ui:C:container({bgColor: `rgb({color.srgb.red*100}%,{color.srgb.green*100}%,{color.srgb.blue*100}%)`, padding: 8, children: [
+	Ui:C:container({children: fast_construct([
+		@(){ Ui:C:container({bgColor: `rgb({color.srgb.red*100}%,{color.srgb.green*100}%,{color.srgb.blue*100}%)`, padding: 8, children: [
 			Ui:C:mfm({text: name, color: if bg.is_bright {'#000'} else {'#FFF'}, size: 2}),
 			Ui:C:text({text: `#{color.hex}`, color: if bg.is_bright {'#000'} else {'#FFF'}, size: if name.len>0 {0.8} else {2} }),
-		]}),
-		Ui:C:container({children: [
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().srgbcolor()}),
 			Ui:C:container({bgColor: `rgb({bg.rgb.r.red*100}%,{bg.rgb.r.green*100}%,{bg.rgb.r.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_r()}: {round_str(color.srgb.red,3)}`, color: if bg.rgb.r_is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.rgb.g.red*100}%,{bg.rgb.g.green*100}%,{bg.rgb.g.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_g()}: {round_str(color.srgb.green,3)}`, color: if bg.rgb.g_is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.rgb.b.red*100}%,{bg.rgb.b.green*100}%,{bg.rgb.b.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_b()}: {round_str(color.srgb.blue,3)}`, color: if bg.rgb.b_is_bright {'#000'} else {'#FFF'}})]}),
-		]}),
-		Ui:C:container({children: [
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().hsvcolor()}),
 			Ui:C:container({bgColor: `rgb({bg.hsv.h.red*100}%,{bg.hsv.h.green*100}%,{bg.hsv.h.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_h()}: {round_str(color.hsv.hue,1)} degree`, color: if bg.hsv.h_is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.hsv.s.red*100}%,{bg.hsv.s.green*100}%,{bg.hsv.s.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_s()}: {round_str(color.hsv.saturation,3)}`, color: if bg.hsv.s_is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.hsv.v.red*100}%,{bg.hsv.v.green*100}%,{bg.hsv.v.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_v()}: {round_str(color.hsv.value,3)}`, color: if bg.hsv.v_is_bright {'#000'} else {'#FFF'}})]}),
-		]}),
-		Ui:C:container({children: [
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().hlscolor()}),
 			Ui:C:container({bgColor: `rgb({bg.hls.h.red*100}%,{bg.hls.h.green*100}%,{bg.hls.h.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_h()}: {round_str(color.hls.hue,1)} degree`, color: if bg.hls.h_is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.hls.l.red*100}%,{bg.hls.l.green*100}%,{bg.hls.l.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_l()}: {round_str(color.hls.lightness,3)}`, color: if bg.hls.l_is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.hls.s.red*100}%,{bg.hls.s.green*100}%,{bg.hls.s.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_s()}: {round_str(color.hls.saturation,3)}`, color: if bg.hls.s_is_bright {'#000'} else {'#FFF'}})]}),
-		]}),
-		Ui:C:container({children: [
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().ycbcrcolor()}),
 			Ui:C:container({bgColor: `rgb({bg.ybr.y.red*100}%,{bg.ybr.y.green*100}%,{bg.ybr.y.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_y()}: {round_str(color.ycbcr.illuminance,3)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.ybr.b.red*100}%,{bg.ybr.b.green*100}%,{bg.ybr.b.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_b()}: {round_str(color.ycbcr.cb,3)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.ybr.r.red*100}%,{bg.ybr.r.green*100}%,{bg.ybr.r.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_r()}: {round_str(color.ycbcr.cr,3)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-		]}),
-		Ui:C:container({children: [
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().xyycolor()}),
 			Ui:C:container({bgColor: `rgb({bg.xyy.x.red*100}%,{bg.xyy.x.green*100}%,{bg.xyy.x.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_x()}: {round_str(color.xyy.point_x,4)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.xyy.y.red*100}%,{bg.xyy.y.green*100}%,{bg.xyy.y.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_y()}: {round_str(color.xyy.point_y,4)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.xyy.l.red*100}%,{bg.xyy.l.green*100}%,{bg.xyy.l.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_l()}: {round_str(color.xyy.illuminance,4)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-		]}),
-		Ui:C:container({children: [
+		]}) }
+		@(){ Ui:C:container({children: [
 			Ui:C:text({text: tr().labcolor()}),
 			Ui:C:container({bgColor: `rgb({bg.lab.l.red*100}%,{bg.lab.l.green*100}%,{bg.lab.l.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_l()}: {round_str(color.lab.l_star,2)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.lab.a.red*100}%,{bg.lab.a.green*100}%,{bg.lab.a.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_a()}: {round_str(color.lab.a_star,2)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
 			Ui:C:container({bgColor: `rgb({bg.lab.b.red*100}%,{bg.lab.b.green*100}%,{bg.lab.b.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_b()}: {round_str(color.lab.b_star,2)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-		]}),
-	]})
+		]}) }
+	])})
 }
 
 @to_srgb() {
