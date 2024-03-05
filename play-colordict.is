@@ -190,7 +190,7 @@
 	].join(Str:lf) }
 }}
 @hexinput(iv) {
-	var value = if Core:type(Color:hex_to_srgb(iv))!='error' {iv} else {'000000'}
+	var value = if Core:type(Color:hex_to_srgb(iv))!='error' {iv} else {''}
 	@to_srgb() {if Core:type(Color:hex_to_srgb(value))!='error' {Color:hex_to_srgb(value)} else {Color:srgb(0,0,0)}}
 	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
 	@update_form() { f.input.update({default: value}) }
@@ -205,7 +205,7 @@
 	{
 		form: Ui:C:container({children: [f.input,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
 		get_value: @(){value}
-		set_value: @(v){ if Color:is_srgb(v) {
+		set_value: @(v){ if Core:type(Color:hex_to_srgb(v))!='error' {
 			value = v
 			fast_construct([update_form, update_sample])
 		} }
