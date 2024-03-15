@@ -18,15 +18,14 @@
 // 複数のPageにJSONを記述し、Misskey APIによって取得しています
 // **このスクリプトの単純なコピーのみでは動作しません**
 @load_filetypes() {
-	let data_source=[
+	[
 		//	ここにデータセットを記述したPageのIDを列挙してください
-	]
-	var result = []
-	for let i, data_source.len {
-		let jsontxt = Mk:api("pages/show", {pageId: data_source[i]}).content[0].text
-		result = result.concat(Json:parse(jsontxt))
-	}
-	result
+	].map(@(i){
+		let page = Mk:api("pages/show", {pageId: i})
+		if Core:type(page) == 'error' { return Error:create('fileyou.datasetload.apierror',{pageId: i, inner_error: {name: page.name, info: page.info}}) }
+		let json = Json:parse(page.content[0].text)
+		if Core:type(json) != 'error' { json } else { Error:create('fileyou.datasetload.jsonerror',{pageId: i, inner_error: {name: json.name, info: json.info}}) }
+	}).reduce(@(b,c,i){if Core:type(b)=='arr' { if Core:type(c)=='arr' {b.concat(c)} else {c}} else {b}},[])
 }
 
 :: FileYou {
