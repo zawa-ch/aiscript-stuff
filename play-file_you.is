@@ -129,7 +129,21 @@
 	])
 }
 
-form_dataprepare()
-let filetypes = load_filetypes()
-form_preprocess()
-draw(`{Date:year()}-{Date:month()}-{Date:day()}` on_draw)
+@__main() {
+	form_dataprepare()
+	let filetypes = load_filetypes()
+	if Core:type(filetypes) == 'error' {
+		Ui:render([])
+		Mk:dialog('Error', `データセット取得中にエラーが発生しました{Str:lf}{filetypes.name}:{Json:stringify(filetypes.info)}`, 'error')
+		return filetypes
+	}
+	form_preprocess()
+	let result = FileYou:draw(filetypes, USER_USERNAME, `{Date:year()}-{Date:month()}-{Date:day()}`)
+	if Core:type(result) == 'error' {
+		Ui:render([])
+		Mk:dialog('Error', `ファイル化の実行中にエラーが発生しました{Str:lf}{result.name}:{Json:stringify(result.info)}`, 'error')
+		return result
+	}
+	on_draw(result)
+}
+__main()
