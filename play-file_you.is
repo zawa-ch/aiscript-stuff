@@ -65,6 +65,10 @@
 	`{s}{fs_unit[u.n]}`
 }
 @draw(source,name,seed) {
+	if Core:type(source) != 'arr' { return Error:create('fileyou.assertion.argtypenotmatch', {argname: 'source', expect: 'arr', actual: Core:type(source)}) }
+	if source.len <= 0 { return Error:create('fileyou.assertion.preconditionnotmet', {argname: 'source', expression: 'source.len', expect: '>0', actual: source.len}) }
+	if Core:type(name) != 'str' { return Error:create('fileyou.assertion.argtypenotmatch', {argname: 'name', expect: 'str', actual: Core:type(name)}) }
+	if Core:type(seed) != 'str' { return Error:create('fileyou.assertion.argtypenotmatch', {argname: 'seed', expect: 'str', actual: Core:type(seed)}) }
 	let r = Math:gen_rng(`{name}:{seed}`)
 	let ft = source[r(0, source.len - 1)]
 	let fe = ft.ext[r(0, ft.ext.len - 1)]
