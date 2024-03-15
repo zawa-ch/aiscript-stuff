@@ -32,14 +32,12 @@
 let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 :: FileYou {
 @hashtag() {'#あなたをファイル化'}
-@rand_filesize(rnd_f) {
-	let n = rnd_f(0, 7)
-	var r = 0
-	for n {
-		r = r + rnd_f(0, 1023)
-		r = r * (1 + rnd_f(0, 1023))
-	}
-	r + rnd_f(0, 1023)
+@rand_filesize(rnd) {
+	let p = rnd(0,89)
+	if (p==0) { return 0 }
+	var r = [1]
+	for p { r.unshift(rnd()) }
+	r.map(@(i){Math:round(i)}).reduce(@(b,c,i){b*2+c},0)
 }
 @fs_class(i) {
 	if i < 1024 { { n: 0, r: i } }
