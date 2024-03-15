@@ -39,29 +39,33 @@ let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 	for p { r.unshift(rnd()) }
 	r.map(@(i){Math:round(i)}).reduce(@(b,c,i){b*2+c},0)
 }
-@fs_class(i) {
-	if i < 1024 { { n: 0, r: i } }
-	else {
-		let s = fs_class(i / 1024)
-		{ n: s.n + 1, r: s.r }
+@filesize_to_str(size) {
+	let fs_unit = ["Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+	@c(i) {
+		if i < 1024 { { n: 0, r: i } }
+		else {
+			let s = c(i / 1024)
+			{ n: s.n + 1, r: s.r }
+		}
 	}
-}
-
-@p10(i) {
-	if i < 0 { null }
-	if i == 0 { 1 }
-	else { 10 * p10(i - 1) }
-}
-@round_sig(value, digit) {
-	if value < p10(digit - 1) {
-		round_sig((value * 10) digit) / 10
-	} elif p10(digit) < value {
-		round_sig((value / 10) digit) * 10
-	} else {
-		Math:round(value)
+	@p(i) {
+		if (i < 10) { 1 } else { 1 + p(i/10) }
 	}
+	@round_str(num,p) {
+		if num>=0&&num<Math:Infinity&&(Math:trunc(p)>0) {
+			let s = Math:round(Core:range(1,Math:trunc(p)).reduce(@(b,c,i){b*10},num)).to_str()
+			[ if s.len>Math:trunc(p) {''} else {'0'}, s.slice(0,s.len-Math:trunc(p)), '.', if s.len>=Math:trunc(p) {''} else {Core:range(1,Math:trunc(p)-s.len).map(@(i){'0'}).join()}, s.slice(s.len-Math:trunc(p),s.len) ].join()
+		} elif num<=0&&num>(0-Math:Infinity)&&(Math:trunc(p)>0) {
+			let s = Math:round(Core:range(1,Math:trunc(p)).reduce(@(b,c,i){b*10},0-num)).to_str()
+			[ '-', if s.len>Math:trunc(p) {''} else {'0'}, s.slice(0,s.len-Math:trunc(p)), '.', if s.len>=Math:trunc(p) {''} else {Core:range(1,Math:trunc(p)-s.len).map(@(i){'0'}).join()}, s.slice(s.len-Math:trunc(p),s.len) ].join()
+		} else {
+			Math:round(num).to_str()
+		}
+	}
+	let u = c(size)
+	let s = if u.n>0 {round_str(u.r,4-p(u.r))} else {u.r}
+	`{s}{fs_unit[u.n]}`
 }
-
 @draw(id, callback) {
 	let random = Math:gen_rng(`{USER_ID}:{id}`)
 	let ft = filetypes[random(0, filetypes.len - 1)]
