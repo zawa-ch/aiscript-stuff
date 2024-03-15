@@ -1,8 +1,8 @@
-/// 0.13.3
+/// @ 0.17.0
 ### {
 	name: "あなたをファイル化"
 	author: "zawa-ch."
-	version: "1.0.2"
+	version: "1.1.0"
 	description: "あなたをファイル化するとどんなファイルになるのか...?"
 	license: {
 		name: "MIT License"
@@ -17,70 +17,72 @@
 // このPlayスクリプトで使用されるデータセットは規模があまりにも大きいため、
 // 複数のPageにJSONを記述し、Misskey APIによって取得しています
 // **このスクリプトの単純なコピーのみでは動作しません**
-let HASHTAG = "#あなたをファイル化"
 @load_filetypes() {
-	let data_source=[
+	[
 		//	ここにデータセットを記述したPageのIDを列挙してください
-	]
-	var result = []
-	for let i, data_source.len {
-		let jsontxt = Mk:api("pages/show", {pageId: data_source[i]}).content[0].text
-		result = result.concat(Json:parse(jsontxt))
-	}
-	result
+	].map(@(i){
+		let page = Mk:api("pages/show", {pageId: i})
+		if Core:type(page) == 'error' { return Error:create('fileyou.datasetload.apierror',{pageId: i, inner_error: {name: page.name, info: page.info}}) }
+		let json = Json:parse(page.content[0].text)
+		if Core:type(json) != 'error' { json } else { Error:create('fileyou.datasetload.jsonerror',{pageId: i, inner_error: {name: json.name, info: json.info}}) }
+	}).reduce(@(b,c,i){if Core:type(b)=='arr' { if Core:type(c)=='arr' {b.concat(c)} else {c}} else {b}},[])
 }
 
-@rand_fs(rnd_f) {
-	let n = rnd_f(0, 7)
-	var r = 0
-	for n {
-		r = r + rnd_f(0, 1023)
-		r = r * (1 + rnd_f(0, 1023))
+:: FileYou {
+@hashtag() {'#あなたをファイル化'}
+@rand_filesize(rnd) {
+	let p = rnd(0,89)
+	if (p==0) { return 0 }
+	var r = [1]
+	for p { r.unshift(rnd()) }
+	r.map(@(i){Math:round(i)}).reduce(@(b,c,i){b*2+c},0)
+}
+@filesize_to_str(size) {
+	let fs_unit = ["Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+	@c(i) {
+		if i < 1024 { { n: 0, r: i } }
+		else {
+			let s = c(i / 1024)
+			{ n: s.n + 1, r: s.r }
+		}
 	}
-	r + rnd_f(0, 1023)
-}
-
-let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
-@fs_class(i) {
-	if i < 1024 { { n: 0, r: i } }
-	else {
-		let s = fs_class(i / 1024)
-		{ n: s.n + 1, r: s.r }
+	@p(i) {
+		if (i < 10) { 1 } else { 1 + p(i/10) }
 	}
-}
-
-@p10(i) {
-	if i < 0 { null }
-	if i == 0 { 1 }
-	else { 10 * p10(i - 1) }
-}
-@round_sig(value, digit) {
-	if value < p10(digit - 1) {
-		round_sig((value * 10) digit) / 10
-	} elif p10(digit) < value {
-		round_sig((value / 10) digit) * 10
-	} else {
-		Math:round(value)
+	@round_str(num,p) {
+		if num>=0&&num<Math:Infinity&&(Math:trunc(p)>0) {
+			let s = Math:round(Core:range(1,Math:trunc(p)).reduce(@(b,c,i){b*10},num)).to_str()
+			[ if s.len>Math:trunc(p) {''} else {'0'}, s.slice(0,s.len-Math:trunc(p)), '.', if s.len>=Math:trunc(p) {''} else {Core:range(1,Math:trunc(p)-s.len).map(@(i){'0'}).join()}, s.slice(s.len-Math:trunc(p),s.len) ].join()
+		} elif num<=0&&num>(0-Math:Infinity)&&(Math:trunc(p)>0) {
+			let s = Math:round(Core:range(1,Math:trunc(p)).reduce(@(b,c,i){b*10},0-num)).to_str()
+			[ '-', if s.len>Math:trunc(p) {''} else {'0'}, s.slice(0,s.len-Math:trunc(p)), '.', if s.len>=Math:trunc(p) {''} else {Core:range(1,Math:trunc(p)-s.len).map(@(i){'0'}).join()}, s.slice(s.len-Math:trunc(p),s.len) ].join()
+		} else {
+			Math:round(num).to_str()
+		}
 	}
+	let u = c(size)
+	let s = if u.n>0 {round_str(u.r,4-p(u.r))} else {u.r}
+	`{s}{fs_unit[u.n]}`
 }
-
-@draw(id, callback) {
-	let random = Math:gen_rng(`{USER_ID}:{id}`)
-	let ft = filetypes[random(0, filetypes.len - 1)]
-	let fe = ft.ext[random(0, ft.ext.len - 1)]
-	let fs = rand_fs(random)
-	let fs_h = `{round_sig(fs_class(fs).r,4)} {fs_unit[(fs_class(fs).n)]}`
-	let result = {
-		user: USER_ID
-		id: id
-		filename: `{USER_USERNAME}.{fe}`
+@draw(source,name,seed) {
+	if Core:type(source) != 'arr' { return Error:create('fileyou.assertion.argtypenotmatch', {argname: 'source', expect: 'arr', actual: Core:type(source)}) }
+	if source.len <= 0 { return Error:create('fileyou.assertion.preconditionnotmet', {argname: 'source', expression: 'source.len', expect: '>0', actual: source.len}) }
+	if Core:type(name) != 'str' { return Error:create('fileyou.assertion.argtypenotmatch', {argname: 'name', expect: 'str', actual: Core:type(name)}) }
+	if Core:type(seed) != 'str' { return Error:create('fileyou.assertion.argtypenotmatch', {argname: 'seed', expect: 'str', actual: Core:type(seed)}) }
+	let r = Math:gen_rng(`{name}:{seed}`)
+	let ft = source[r(0, source.len - 1)]
+	let fe = ft.ext[r(0, ft.ext.len - 1)]
+	let fs = rand_filesize(r)
+	{
+		name: name
+		seed: seed
+		filename: `{name}.{fe}`
 		filesize: fs
 		mimetype: ft.mime
 		mimedescription: ft.description
-		text: `$[tada.speed=0s {USER_USERNAME}.{fe}]{Str:lf}{fs_h}<small>({fs} Bytes)</small>{Str:lf}<small>{ft.description}<{ft.mime}>{Str:lf}</small>`
+		text: `$[tada.speed=0s {name}.{fe}]{Str:lf}{filesize_to_str(fs)}<small>({fs} Bytes)</small>{Str:lf}<small>{ft.description}<{ft.mime}>{Str:lf}</small>`
 	}
-	if callback != null { callback(result) }
-	result
+}
 }
 
 @on_draw(result) {
@@ -99,7 +101,7 @@ let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 					rounded: true
 					primary: true
 					form: {
-						text: `{USER_NAME}をファイル化しました{Str:lf}{Str:lf}{result.text}{Str:lf}{HASHTAG}{Str:lf}{THIS_URL}`
+						text: `{USER_NAME}をファイル化しました{Str:lf}{Str:lf}{result.text}{Str:lf}{FileYou:hashtag()}{Str:lf}{THIS_URL}`
 					}
 				})
 			]
@@ -127,7 +129,21 @@ let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 	])
 }
 
-form_dataprepare()
-let filetypes = load_filetypes()
-form_preprocess()
-draw(`{Date:year()}-{Date:month()}-{Date:day()}` on_draw)
+@__main() {
+	form_dataprepare()
+	let filetypes = load_filetypes()
+	if Core:type(filetypes) == 'error' {
+		Ui:render([])
+		Mk:dialog('Error', `データセット取得中にエラーが発生しました{Str:lf}{filetypes.name}:{Json:stringify(filetypes.info)}`, 'error')
+		return filetypes
+	}
+	form_preprocess()
+	let result = FileYou:draw(filetypes, USER_USERNAME, `{Date:year()}-{Date:month()}-{Date:day()}`)
+	if Core:type(result) == 'error' {
+		Ui:render([])
+		Mk:dialog('Error', `ファイル化の実行中にエラーが発生しました{Str:lf}{result.name}:{Json:stringify(result.info)}`, 'error')
+		return result
+	}
+	on_draw(result)
+}
+__main()
