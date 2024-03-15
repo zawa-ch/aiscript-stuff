@@ -29,11 +29,10 @@
 	result
 }
 
+let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 :: FileYou {
 @hashtag() {'#あなたをファイル化'}
-}
-
-@rand_fs(rnd_f) {
+@rand_filesize(rnd_f) {
 	let n = rnd_f(0, 7)
 	var r = 0
 	for n {
@@ -42,8 +41,6 @@
 	}
 	r + rnd_f(0, 1023)
 }
-
-let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 @fs_class(i) {
 	if i < 1024 { { n: 0, r: i } }
 	else {
@@ -84,6 +81,7 @@ let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 	}
 	if callback != null { callback(result) }
 	result
+}
 }
 
 @on_draw(result) {
