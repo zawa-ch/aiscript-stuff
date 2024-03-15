@@ -17,7 +17,6 @@
 // このPlayスクリプトで使用されるデータセットは規模があまりにも大きいため、
 // 複数のPageにJSONを記述し、Misskey APIによって取得しています
 // **このスクリプトの単純なコピーのみでは動作しません**
-let HASHTAG = "#あなたをファイル化"
 @load_filetypes() {
 	let data_source=[
 		//	ここにデータセットを記述したPageのIDを列挙してください
@@ -28,6 +27,10 @@ let HASHTAG = "#あなたをファイル化"
 		result = result.concat(Json:parse(jsontxt))
 	}
 	result
+}
+
+:: FileYou {
+@hashtag() {'#あなたをファイル化'}
 }
 
 @rand_fs(rnd_f) {
@@ -99,7 +102,7 @@ let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 					rounded: true
 					primary: true
 					form: {
-						text: `{USER_NAME}をファイル化しました{Str:lf}{Str:lf}{result.text}{Str:lf}{HASHTAG}{Str:lf}{THIS_URL}`
+						text: `{USER_NAME}をファイル化しました{Str:lf}{Str:lf}{result.text}{Str:lf}{FileYou:hashtag()}{Str:lf}{THIS_URL}`
 					}
 				})
 			]
