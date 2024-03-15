@@ -66,23 +66,20 @@ let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 	let s = if u.n>0 {round_str(u.r,4-p(u.r))} else {u.r}
 	`{s}{fs_unit[u.n]}`
 }
-@draw(id, callback) {
-	let random = Math:gen_rng(`{USER_ID}:{id}`)
-	let ft = filetypes[random(0, filetypes.len - 1)]
-	let fe = ft.ext[random(0, ft.ext.len - 1)]
-	let fs = rand_fs(random)
-	let fs_h = `{round_sig(fs_class(fs).r,4)} {fs_unit[(fs_class(fs).n)]}`
-	let result = {
-		user: USER_ID
-		id: id
-		filename: `{USER_USERNAME}.{fe}`
+@draw(source,name,seed) {
+	let r = Math:gen_rng(`{name}:{seed}`)
+	let ft = source[r(0, source.len - 1)]
+	let fe = ft.ext[r(0, ft.ext.len - 1)]
+	let fs = rand_filesize(r)
+	{
+		name: name
+		seed: seed
+		filename: `{name}.{fe}`
 		filesize: fs
 		mimetype: ft.mime
 		mimedescription: ft.description
-		text: `$[tada.speed=0s {USER_USERNAME}.{fe}]{Str:lf}{fs_h}<small>({fs} Bytes)</small>{Str:lf}<small>{ft.description}<{ft.mime}>{Str:lf}</small>`
+		text: `$[tada.speed=0s {name}.{fe}]{Str:lf}{filesize_to_str(fs)}<small>({fs} Bytes)</small>{Str:lf}<small>{ft.description}<{ft.mime}>{Str:lf}</small>`
 	}
-	if callback != null { callback(result) }
-	result
 }
 }
 
