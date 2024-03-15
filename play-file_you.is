@@ -2,7 +2,7 @@
 ### {
 	name: "あなたをファイル化"
 	author: "zawa-ch."
-	version: "1.0.2"
+	version: "1.1.0"
 	description: "あなたをファイル化するとどんなファイルになるのか...?"
 	license: {
 		name: "MIT License"
