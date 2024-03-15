@@ -29,7 +29,6 @@
 	result
 }
 
-let fs_unit = [ "Byte", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 :: FileYou {
 @hashtag() {'#あなたをファイル化'}
 @rand_filesize(rnd) {
