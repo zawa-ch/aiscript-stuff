@@ -50,6 +50,7 @@
 }
 }
 
+Ui:render([ Ui:C:mfm({ text: ['準備中……', 'しばらくお待ちください'].join(Str:lf) }) ])
 let d = Dataset:get([
 	// ここにデータソースのpage IDを記述します
 ], @(l,r){ l.concat(r) })
