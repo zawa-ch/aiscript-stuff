@@ -10,186 +10,21 @@
     }
 }
 let HASHTAG = "#フォント10連ガチャ"
-let lottery_data = {
-    common: {
-        name: "N"
-        weight: 60
-        fonts: [
-            "ＭＳ ゴシック"
-            "ＭＳ Ｐゴシック"
-            "ＭＳ 明朝"
-            "ＭＳ Ｐ明朝"
-            "MS UIGothic"
-            "メイリオ"
-            "arial"
-            "courier"
-            "courier new"
-            "Century Gothic"
-            "HGゴシック"
-            "HG行書体"
-            "HG教科書体"
-            "HG明朝"
-            "HG創英角ポップ体"
-            "HG創英角ゴシックUB"
-            "HG正楷書体PRO"
-            "HG丸ゴシックPRO"
-            "impact"
-            "Monotype Corsiva"
-            "Noto Mono"
-            "Noto Sans"
-            "Noto Serif"
-            "OCRB"
-            "Segoe UI"
-            "Segoe WP"
-            "Symbol"
-            "Tahoma"
-            "Times New Roman"
-            "Verdana"
-            "Webdings"
-            "Wingdings"
-            "Wingdings2"
-            "Wingdings3"
-            "Yu Gothic UI"
-        ]
-    }
 
-    uncommon: {
-        name: "R"
-        weight: 25
-        fonts: [
-            "フロップデザイン"
-            "やさしさアンチック"
-            "やさしさゴシック"
-            "超極細ゴシック"
-            "しねきゃぷしょん"
-            "あずきフォント"
-            "Droid Sans"
-            "Droid Serif"
-            "DejaVu Sans"
-            "Digital-7 mono"
-            "Eferena"
-            "FreeMono"
-            "FreeSans"
-            "FreeSerif"
-            "Gargi"
-            "Garuda"
-            "Gentium"
-            "Greetings"
-            "はらませにゃんこ"
-            "東青梅ゴシック"
-            "imagine YOKOHAMA"
-            "なごみ極細ゴシック"
-            "IPAexゴシック"
-            "IPAex明朝"
-            "IPAゴシック"
-            "IPA明朝"
-            "IPAPゴシック"
-            "IPAP明朝"
-            "Kalimati"
-            "Likhan"
-            "Loma"
-            "Meera"
-            "Membra"
-            "Mgen+"
-            "Migmix"
-            "Mitra Mono"
-            "M+ font"
-            "Nakula"
-            "NanumGothic"
-            "NanumMyeongjo"
-            "Nimbus Mono"
-            "Roboto"
-            "Liberation Mono"
-            "Liberation Sans"
-            "Liberation Sans Narrow"
-            "Liberation Serif"
-            "Oxygen Mono"
-            "Oxygen-Sans"
-            "Samanata"
-            "Symbola"
-            "たぬき油性マジック"
-            "Techno"
-            "Waree"
-            "WIFI"
-        ]
-    }
-
-    rare: {
-        name: "SR"
-        weight: 10
-        fonts: [
-            "Adlanta"
-            "Champagne & Limousines"
-            "Cherry"
-            "Cilica"
-            "DengXian"
-            "Dyuthi"
-            "ElectroHarmonix"
-            "espresso Dolce"
-            "Feel Me"
-            "Gabato"
-            "Goudy Old Style"
-            "GiantRobotArmy"
-            "ヒラギノ明朝"
-            "本明朝"
-            "本明朝-Book"
-            "gibi"
-            "刻ゴシック"
-            "刻明朝フォント"
-            "Laksaman"
-            "Line"
-            "modern squared"
-            "Napo"
-            "Open Sans"
-            "Purisa"
-            "Rage"
-            "Sawasdee"
-            "Source Han Code JP"
-            "Source Sans Pro"
-            "Shelter Code"
-            "Space Theme"
-            "Squared"
-            "秀英初号明朝"
-            "Takao Pゴシック"
-            "Tlwg Typist"
-            "Tlwg Typo"
-            "凸版文久明朝"
-            "Vemana2000"
-            "にゃしぃフォント改二"
-        ]
-    }
-
-    epic: {
-        name: "SSR"
-        weight: 5
-        fonts: [
-            "拡張にゃしいフォント"
-            "Artypa"
-            "Asai Analogue"
-            "coffee icons"
-            "筑紫A丸ゴシック"
-            "筑紫B丸ゴシック"
-            "Fallkhar Runes"
-            "Farewell"
-            "First Shine"
-            "Golden Ratio"
-            "HEXAGON cup font"
-            "Kalapi"
-            "Madeon Runes"
-            "modern"
-            "Normograph"
-            "OCR A Extended"
-            "Pixelig Cursief"
-            "Restroom"
-            "Semi-Casual"
-            "SkateC"
-            "small font"
-            "Susanna"
-            "Ubuntu"
-            "ZESSTYPE GRAFIKA"
-        ]
-    }
+:: Dataset {
+@get(sourceIds,merge) {
+	sourceIds.map(@(i){
+		let page = Mk:api("pages/show", {pageId: i})
+		if Core:type(page) == 'error' { return Error:create('dataset.apierror',{pageId: i, inner_error: {name: page.name, info: page.info}}) }
+		let json = Json:parse(page.content[0].text)
+		if Core:type(json) != 'error' { json } else { Error:create('dataset.jsonerror',{pageId: i, inner_error: {name: json.name, info: json.info}}) }
+	}).reduce(@(b,c,i){if Core:type(b)!='error' { if Core:type(c)!='error' { merge(b, c) } else {c}} else {b}})
 }
+}
+
+let lottery_data = Dataset:get([
+	// ここにデータソースのpage IDを記述します
+], @(l,r){ l.concat(r) })
 
 @on_draw(result) {
     Ui:render([
