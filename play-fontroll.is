@@ -3,7 +3,7 @@
 	name: "フォント10連ガチャ！"
 	author: "zawa-ch."
 	version: "2.0.0"
-	description: "文字通りフォントの10連ガチャです。排出確率はCommon: 62.5%, $[fg.color=fc5 Uncommon: 25%], $[fg.color=5cf Rare: 10%], $[fg.color=f5c Epic: 2.5%](レアリティ選定基準は独断と偏見によるもの)です。"
+	description: "文字通りフォントの10連ガチャ。排出確率はCommon: 62.5%, $[fg.color=fc5 Uncommon: 25%], $[fg.color=5cf Rare: 10%], $[fg.color=f5c Epic: 2.5%](レアリティ選定基準は独断と偏見によるもの)です。"
 	license: {
 		name: "MIT License"
 		href: "http://www.opensource.org/licenses/mit-license.php"
