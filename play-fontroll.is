@@ -1,0 +1,76 @@
+/// @ 0.17.0
+### {
+	name: "フォント10連ガチャ！"
+	author: "zawa-ch."
+	version: "2.0.0"
+	description: "文字通りフォントの10連ガチャです。排出確率はCommon: 62.5%, $[fg.color=fc5 Uncommon: 25%], $[fg.color=5cf Rare: 10%], $[fg.color=f5c Epic: 2.5%](レアリティ選定基準は独断と偏見によるもの)です。"
+	license: {
+		name: "MIT License"
+		href: "http://www.opensource.org/licenses/mit-license.php"
+	}
+}
+
+:: Dataset {
+@get(sourceIds,merge) {
+	sourceIds.map(@(i){
+		let page = Mk:api("pages/show", {pageId: i})
+		if Core:type(page) == 'error' { return Error:create('dataset.apierror',{pageId: i, inner_error: {name: page.name, info: page.info}}) }
+		let json = Json:parse(page.content[0].text)
+		if Core:type(json) != 'error' { json } else { Error:create('dataset.jsonerror',{pageId: i, inner_error: {name: json.name, info: json.info}}) }
+	}).reduce(@(b,c,i){if Core:type(b)!='error' { if Core:type(c)!='error' { merge(b, c) } else {c}} else {b}})
+}
+}
+
+:: FontRoll {
+@hashtag() {'#フォント10連ガチャ'}
+@draw(data, seed) {
+	let m = data.reduce(@(b1,c1,i1){ b1.concat([data.slice(0,i1+1).reduce(@(b2,c2,i2){b2+c2.weight},0)]) },[])
+	let rn = Math:gen_rng(seed)
+	let rs = eval {
+		let a = []
+		// mapは呼び出し順序が保証されないためforでやる
+		for let i, 10 {
+			let cv = rn(0, m[m.len - 1] - 1)
+			let ct = data[m.filter(@(i){ cv>=i }).reduce(@(b,c,i){ b+1 },0)]
+			a.push(Obj:merge({short: ct.short, color: ct.color, rarity: ct.rarity} ,ct.items[rn(0, ct.items.len - 1)]))
+		}
+		a
+	}
+	{
+		seed: seed
+		result: rs
+		to_text: @(){ rs.map(@(i){ `[{i.short}] {i.name}` }).join(Str:lf) }
+		to_mfm: @(){ rs.map(@(i){ [
+			if Core:type(i.color) == 'str' { `$[fg.color={i.color} ` } else { '' }
+			`<plain>[{i.short}]</plain> `,
+			if Core:type(i.url) == 'str' { if Core:type(i.color) == 'str' { `?[$[fg.color={i.color} {i.name}]]({i.url})` } else { `?[{i.name}]({i.url})` } } else { `{i.name}` },
+			if Core:type(i.color) == 'str' { `]` } else { '' }
+		].join() }).join(Str:lf) }
+	}
+}
+}
+
+let d = Dataset:get([
+	// ここにデータソースのpage IDを記述します
+], @(l,r){ l.concat(r) })
+
+let seedtextarea = Ui:C:mfm({ text: '' })
+let resulttextarea = Ui:C:mfm({ text: '' })
+let postformbutton = Ui:C:postFormButton({ text: "投稿する", rounded: true, primary: true, form: { text: '' } })
+
+@on_draw(result) {
+	seedtextarea.update({ text: `<small><small>ID: {result.seed}</small></small>` })
+	resulttextarea.update({ text: `フォント10連ガチャ結果！{Str:lf}{result.to_mfm()}` })
+	postformbutton.update({ text: "投稿する", rounded: true, primary: true, form: { text: `フォント10連ガチャ結果！{Str:lf}{result.to_mfm()}{Str:lf}{FontRoll:hashtag()}{Str:lf}{THIS_URL}` } })
+}
+
+on_draw(FontRoll:draw(d, Util:uuid()))
+Ui:render([
+	Ui:C:container({ children: [ resulttextarea, seedtextarea ] })
+	Ui:C:container({ align: 'center' children: [
+		Ui:C:buttons({ buttons: [
+			{ text: "引きなおす", onClick: @(){ on_draw(FontRoll:draw(d, Util:uuid())) } }
+		] }),
+		postformbutton
+	] })
+])
