@@ -159,6 +159,7 @@
 @tr() {{
 	colorspace: @(){'色空間'}
 	sample: @(){'サンプル'}
+	scale: @(){'スケール'}
 	hexcolor: @(){'16進数'}
 	srgbcolor: @(){'sRGB'}
 	srgb_r: @(){ '赤' }
@@ -202,6 +203,12 @@
 	let i = Ui:C:textInput({ label: label_text, default: value, onInput: @(v){ if Core:type(Color:hex_to_srgb(v))!='error' {seq([@(){t[0]=v}, @(){ if Core:type(on_input)=='fn' {on_input(v)} }])} } })
 	{ ui: i, value: @(){t[0]}, set_value: @(v){ discard(seq([@(){t[0]=v}, @(){ i.update({default: v}) }])) } }
 }
+@scalevalueinput(label_text, value, scale, on_input) {
+	var t = [value, scale]
+	let i = Ui:C:numberInput({ label: `{label_text}(1/{scale})`, default: value*scale, onInput: @(v){ seq([@(){t[0]=v/t[1]}, @(){ if Core:type(on_input)=='fn' {on_input(v/t[1])} }]) } })
+	{ ui: i, value: @(){t[0]}, scale: @(){t[1]}, set_value: @(v){ discard(seq([@(){t[0]=v}, @(){ i.update({default: v*t[1]}) }])) }, set_scale: @(v){ discard(seq([@(){t[1]=v}, @(){ i.update({label: `{label_text}(1/{v})`, default: t[0]*v}) }])) } }
+}
+@scaleselect(label_text, items, iv, on_change) { Ui:C:select({label: label_text, items: items.map(@(i){{text: `0..{i}`, value: i.to_str()}}), default: iv.to_str(), onChange: @(v){ if Core:type(on_change)=='fn' { on_change(v.to_num()) } }}) }
 @hexinput(iv) {
 	@to_srgb() { if Core:type(Color:hex_to_srgb(f[1].value()))!='error' {Color:hex_to_srgb(f[1].value())} else {Color:srgb(0,0,0)} }
 	@update_sample() { f[0].update(to_srgb()) }
@@ -209,37 +216,20 @@
 	update_sample()
 	{
 		form: Ui:C:container({children: [f[1].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
-		get_value: @(){f[1].value()}
+		get_value: @(){ f[1].value() }
 		set_value: @(v){if Core:type(Color:hex_to_srgb(v))!='error' { discard(seq([@(){f[1].set_value(v)}, update_sample])) } }
 	}
 }
 @srgbinput(iv) {
-	var value = if Color:is_srgb(iv) {iv} else {Color:srgb(0,0,0)}
-	@update_sample() { f.sample.update({bgColor: `rgb({value.red*100}%,{value.green*100}%,{value.blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_r.update({default: value.red*100})},@(){f.input_g.update({default: value.green*100})},@(){f.input_b.update({default: value.blue*100})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_r: @(){Ui:C:numberInput({label: tr().srgb_r(), default: value.red*100, onInput: @(v){
-			value.red = v/100
-			update_sample()
-		}})}
-		input_g: @(){Ui:C:numberInput({label: tr().srgb_g(), default: value.green*100, onInput: @(v){
-			value.green = v/100
-			update_sample()
-		}})}
-		input_b: @(){Ui:C:numberInput({label: tr().srgb_b(), default: value.blue*100, onInput: @(v){
-			value.blue = v/100
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() { Color:srgb(f[1].value(), f[2].value(), f[3].value()) }
+	@update_sample() { f[0].update(to_srgb()) }
+	let f = [ sample_container(Color:srgb(0,0,0)), scalevalueinput(tr().srgb_r(), iv.red, 100, @(){ update_sample() }), scalevalueinput(tr().srgb_g(), iv.green, 100, @(){ update_sample() }), scalevalueinput(tr().srgb_b(), iv.blue, 100, @(){ update_sample() }) ]
+	let sc = scaleselect(tr().scale(), [15, 100, 255, 65535], 100,  @(v){[ f[1].set_scale(v), f[2].set_scale(v), f[3].set_scale(v) ]})
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_r,f.input_g,f.input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_srgb(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [sc, f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:srgb(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_srgb(v) { discard(seq([@(){[ f[1].set_value(v.red), f[2].set_value(v.green), f[3].set_value(v.blue) ]}, update_sample])) } }
 	}
 }
 @hsvinput(iv) {
