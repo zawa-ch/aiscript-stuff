@@ -203,6 +203,11 @@
 	let i = Ui:C:textInput({ label: label_text, default: value, onInput: @(v){ if Core:type(Color:hex_to_srgb(v))!='error' {seq([@(){t[0]=v}, @(){ if Core:type(on_input)=='fn' {on_input(v)} }])} } })
 	{ ui: i, value: @(){t[0]}, set_value: @(v){ discard(seq([@(){t[0]=v}, @(){ i.update({default: v}) }])) } }
 }
+@numvalueinput(label_text, value, on_input) {
+	var t = [value]
+	let i = Ui:C:numberInput({ label: label_text, default: value, onInput: @(v){ seq([@(){t[0]=v}, @(){ if Core:type(on_input)=='fn' {on_input(v)} }]) } })
+	{ ui: i, value: @(){t[0]}, set_value: @(v){ discard(seq([@(){t[0]=v}, @(){ i.update({default: v}) }])) } }
+}
 @loopvalueinput(label_text, value, max, on_input) {
 	@r(v){if v>=0 { v%max } elif v<0 { (v%max)+max } else { v }}
 	var t = [value]
@@ -285,33 +290,14 @@
 	}
 }
 @labinput(iv) {
-	var value = if Color:is_lab(iv) {iv} else {Color:lab(0,0,0)}
-	@to_srgb() {Color:xyz_to_srgb(Color:lab_to_xyz(value))}
-	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_l.update({default: value.l_star})},@(){f.input_a.update({default: value.a_star})},@(){f.input_b.update({default: value.b_star})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_l: @(){Ui:C:numberInput({label: tr().lab_l(), default: value.l_star, onInput: @(v){
-			value.l_star = v
-			update_sample()
-		}})}
-		input_a: @(){Ui:C:numberInput({label: tr().lab_a(), default: value.a_star, onInput: @(v){
-			value.a_star = v
-			update_sample()
-		}})}
-		input_b: @(){Ui:C:numberInput({label: tr().lab_b(), default: value.b_star, onInput: @(v){
-			value.b_star = v
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() {Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(f[1].value(), f[2].value(), f[3].value())))}
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [ sample_container(Color:srgb(0,0,0)), numvalueinput(tr().lab_l(), iv.l_star, @(){ update_sample() }), numvalueinput(tr().lab_a(), iv.a_star, @(){ update_sample() }), numvalueinput(tr().lab_b(), iv.b_star, @(){ update_sample() }) ]
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_l,f.input_a,f.input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_lab(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:lab(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_lab(v) { discard(seq([@(){[ f[1].set_value(v.l_star), f[2].set_value(v.a_star), f[3].set_value(v.b_star) ]}, update_sample])) } }
 	}
 }
 @round_str(num,p) {
