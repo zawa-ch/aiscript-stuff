@@ -203,6 +203,12 @@
 	let i = Ui:C:textInput({ label: label_text, default: value, onInput: @(v){ if Core:type(Color:hex_to_srgb(v))!='error' {seq([@(){t[0]=v}, @(){ if Core:type(on_input)=='fn' {on_input(v)} }])} } })
 	{ ui: i, value: @(){t[0]}, set_value: @(v){ discard(seq([@(){t[0]=v}, @(){ i.update({default: v}) }])) } }
 }
+@loopvalueinput(label_text, value, max, on_input) {
+	@r(v){if v>=0 { v%max } else { (v%max)+max }}
+	var t = [value]
+	let i = Ui:C:numberInput({ label: `{label_text}(0..{max})`, default: value, onInput: @(v){ seq([@(){t[0]=r(v)}, @(){ if v!=(r(v)) { i.update({default: r(v)}) } }, @(){ if Core:type(on_input)=='fn' {on_input(r(v))} }]) } })
+	{ ui: i, value: @(){t[0]}, set_value: @(v){ discard(seq([@(){t[0]=r(v)}, @(){ i.update({default: r(v)}) }])) } }
+}
 @scalevalueinput(label_text, value, scale, on_input) {
 	var t = [value, scale]
 	let i = Ui:C:numberInput({ label: `{label_text}(1/{scale})`, default: value*scale, onInput: @(v){ seq([@(){t[0]=v/t[1]}, @(){ if Core:type(on_input)=='fn' {on_input(v/t[1])} }]) } })
@@ -233,33 +239,15 @@
 	}
 }
 @hsvinput(iv) {
-	var value = if Color:is_hsv(iv) {iv} else {Color:hsv(0,0,0)}
-	@to_srgb() {Color:hsv_to_srgb(value)}
-	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_h.update({default: value.hue})},@(){f.input_s.update({default: value.saturation*100})},@(){f.input_v.update({default: value.value*100})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_h: @(){Ui:C:numberInput({label: tr().hsv_h(), default: value.hue, onInput: @(v){
-			value.hue = v%360
-			update_sample()
-		}})}
-		input_s: @(){Ui:C:numberInput({label: tr().hsv_s(), default: value.saturation*100, onInput: @(v){
-			value.saturation = v/100
-			update_sample()
-		}})}
-		input_v: @(){Ui:C:numberInput({label: tr().hsv_v(), default: value.value*100, onInput: @(v){
-			value.value = v/100
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() {Color:hsv_to_srgb(Color:hsv(f[1].value(), f[2].value(), f[3].value()))}
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [ sample_container(Color:srgb(0,0,0)), loopvalueinput(tr().hsv_h(), iv.hue, 360, @(){ update_sample() }), scalevalueinput(tr().hsv_s(), iv.saturation, 100, @(){ update_sample() }), scalevalueinput(tr().hsv_v(), iv.value, 100, @(){ update_sample() }) ]
+	let sc = scaleselect(tr().scale(), [15, 100, 255, 65535], 100,  @(v){[ f[2].set_scale(v), f[3].set_scale(v) ]})
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_h,f.input_s,f.input_v,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_hsv(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [sc,f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:hsv(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_hsv(v) { discard(seq([@(){[ f[1].set_value(v.hue), f[2].set_value(v.saturation), f[3].set_value(v.value) ]}, update_sample])) } }
 	}
 }
 @hlsinput(iv) {
