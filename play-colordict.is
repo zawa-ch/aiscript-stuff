@@ -251,33 +251,15 @@
 	}
 }
 @hlsinput(iv) {
-	var value = if Color:is_hls(iv) {iv} else {Color:hls(0,0,0)}
-	@to_srgb() {Color:hls_to_srgb(value)}
-	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_h.update({default: value.hue})},@(){f.input_l.update({default: value.lightness*100})},@(){f.input_s.update({default: value.saturation*100})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_h: @(){Ui:C:numberInput({label: tr().hls_h(), default: value.hue, onInput: @(v){
-			value.hue = v%360
-			update_sample()
-		}})}
-		input_l: @(){Ui:C:numberInput({label: tr().hls_l(), default: value.lightness*100, onInput: @(v){
-			value.lightness = v/100
-			update_sample()
-		}})}
-		input_s: @(){Ui:C:numberInput({label: tr().hls_s(), default: value.saturation*100, onInput: @(v){
-			value.saturation = v/100
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() {Color:hls_to_srgb(Color:hls(f[1].value(), f[2].value(), f[3].value()))}
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [ sample_container(Color:srgb(0,0,0)), loopvalueinput(tr().hls_h(), iv.hue, 360, @(){ update_sample() }), scalevalueinput(tr().hls_l(), iv.lightness, 100, @(){ update_sample() }), scalevalueinput(tr().hls_s(), iv.saturation, 100, @(){ update_sample() }) ]
+	let sc = scaleselect(tr().scale(), [15, 100, 255, 65535], 100,  @(v){[ f[2].set_scale(v), f[3].set_scale(v) ]})
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_h,f.input_l,f.input_s,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_hsv(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [sc,f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:hls(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_hls(v) { discard(seq([@(){[ f[1].set_value(v.hue), f[2].set_value(v.lightness), f[3].set_value(v.saturation) ]}, update_sample])) } }
 	}
 }
 @ycbcrinput(iv) {
