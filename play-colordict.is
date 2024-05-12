@@ -204,7 +204,7 @@
 	{ ui: i, value: @(){t[0]}, set_value: @(v){ discard(seq([@(){t[0]=v}, @(){ i.update({default: v}) }])) } }
 }
 @loopvalueinput(label_text, value, max, on_input) {
-	@r(v){if v>=0 { v%max } else { (v%max)+max }}
+	@r(v){if v>=0 { v%max } elif v<0 { (v%max)+max } else { v }}
 	var t = [value]
 	let i = Ui:C:numberInput({ label: `{label_text}(0..{max})`, default: value, onInput: @(v){ seq([@(){t[0]=r(v)}, @(){ if v!=(r(v)) { i.update({default: r(v)}) } }, @(){ if Core:type(on_input)=='fn' {on_input(r(v))} }]) } })
 	{ ui: i, value: @(){t[0]}, set_value: @(v){ discard(seq([@(){t[0]=r(v)}, @(){ i.update({default: r(v)}) }])) } }
@@ -274,33 +274,14 @@
 	}
 }
 @xyyinput(iv) {
-	var value = if Color:is_xyy(iv) {iv} else {Color:xyy(0.3333,0.3333,0)}
-	@to_srgb() {Color:xyz_to_srgb(Color:xyy_to_xyz(value))}
-	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_x.update({default: value.point_x*1000})},@(){f.input_y.update({default: value.point_y*1000})},@(){f.input_l.update({default: value.illuminance*100})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_x: @(){Ui:C:numberInput({label: tr().xyy_x(), default: value.point_x*1000, onInput: @(v){
-			value.point_x = v/1000
-			update_sample()
-		}})}
-		input_y: @(){Ui:C:numberInput({label: tr().xyy_y(), default: value.point_y*1000, onInput: @(v){
-			value.point_y = v/1000
-			update_sample()
-		}})}
-		input_l: @(){Ui:C:numberInput({label: tr().xyy_l(), default: value.illuminance*100, onInput: @(v){
-			value.illuminance = v/100
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() {Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(f[1].value(), f[2].value(), f[3].value())))}
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [ sample_container(Color:srgb(0,0,0)), scalevalueinput(tr().xyy_x(), iv.point_x, 1000, @(){ update_sample() }), scalevalueinput(tr().xyy_y(), iv.point_y, 1000, @(){ update_sample() }), scalevalueinput(tr().xyy_l(), iv.illuminance, 100, @(){ update_sample() }) ]
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_x,f.input_y,f.input_l,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_xyy(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:xyy(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_xyy(v) { discard(seq([@(){[ f[1].set_value(v.point_x), f[2].set_value(v.point_y), f[3].set_value(v.illuminance) ]}, update_sample])) } }
 	}
 }
 @labinput(iv) {
