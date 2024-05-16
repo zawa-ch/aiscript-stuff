@@ -185,8 +185,7 @@
 	lab_l: @(){ '輝度' }
 	lab_a: @(){ 'a*位置' }
 	lab_b: @(){ 'b*位置' }
-	percent: @(){ '百分率' }
-	permill: @(){ '千分率' }
+	out_gamut: @() { 'sRGB色域外' }
 	notes_title: @(){ '注意事項' }
 	notes_content: @(){ [
 		'このAiScriptで得られる値の精度についての保証はありません。あくまで参考程度にご活用ください。'
@@ -348,27 +347,24 @@
 	let t = [ Color:srgb_to_hex24(Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(lab.l_star,0,0)))), Color:srgb_to_hex24(Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(lab.l_star,lab.a_star,0)))), Color:srgb_to_hex24(Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(lab.l_star,0,lab.b_star)))), if Color:lab_to_xyz(lab).y>0.5 {'000'} else {'fff'} ]
 	`$[font.monospace $[bg.color={t[0]} $[fg.color={t[3]} L* {round_str(lab.l_star,2)}]], $[bg.color={t[1]} $[fg.color={t[3]} a* {sround_str(lab.a_star,2)}]], $[bg.color={t[2]} $[fg.color={t[3]} b* {sround_str(lab.b_star,2)}]]]`
 }
-@construct_sample(name,srgb) {
-	Ui:C:container({children: fast_construct([
-		@(){ Ui:C:container({bgColor: `rgb({srgb.red*100}%,{srgb.green*100}%,{srgb.blue*100}%)`, padding: 8, children: [
-			Ui:C:mfm({text: name, color: if Color:xyz_to_xyy(Color:srgb_to_xyz(srgb)).illuminance>0.5 {'#000'} else {'#FFF'}, size: 2}),
-			Ui:C:text({text: `#{Color:srgb_to_hex24(srgb)}`, color: if Color:xyz_to_xyy(Color:srgb_to_xyz(srgb)).illuminance>0.5 {'#000'} else {'#FFF'}, size: if name.len>0 {0.8} else {2} }),
-		]}) },
-		@(){ Ui:C:mfm({text: [
-			tr().srgbcolor(),
-			srgb_sample_mfm(srgb),
-			tr().hsvcolor(),
-			hsv_sample_mfm(Color:srgb_to_hsv(srgb)),
-			tr().hlscolor(),
-			hls_sample_mfm(Color:srgb_to_hls(srgb)),
-			tr().ycbcrcolor(),
-			ycbcr_sample_mfm(Color:srgb_to_ycbcr(srgb)),
-			tr().xyycolor(),
-			xyy_sample_mfm(Color:xyz_to_xyy(Color:srgb_to_xyz(srgb))),
-			tr().labcolor(),
-			lab_sample_mfm(Color:xyz_to_lab(Color:srgb_to_xyz(srgb)))
-		].join(Str:lf) }) },
-	])})
+@sample_header(name, srgb) {
+	var t = [ name, srgb ]
+	let ui = [ Ui:C:container({ padding: 8, children: [] }), Ui:C:mfm({ text: '', size: 2 }), Ui:C:text({ text: '' }) ]
+	@u() {[ ui[0].update({ bgColor: `rgb({srgb.red*100}%,{srgb.green*100}%,{srgb.blue*100}%)`, children: [ ui[1], ui[2] ] }), ui[1].update({ text: name, color: if Color:xyz_to_xyy(Color:srgb_to_xyz(srgb)).illuminance>0.5 {'#000'} else {'#FFF'} }), ui[2].update({ text: if Color:is_insrgbgamut(srgb) { `#{Color:srgb_to_hex24(srgb)}` } else { tr().out_gamut() }, color: if Color:xyz_to_xyy(Color:srgb_to_xyz(srgb)).illuminance>0.5 {'#000'} else {'#FFF'}, size: if (name.len>0)||(!Color:is_insrgbgamut(srgb)) {0.8} else {2} }) ]}
+	u()
+	{ ui: ui[0], name: @(){ t[0] }, color: @(){ t[1] }, set_name: @(v){ discard(seq([ @(){ t[0] = v }, @(){ u() } ])) }, set_color: @(v){ discard(seq([ @(){ t[1] = v }, @(){ u() } ])) } }
+}
+@sample_elements(srgb) {
+	var t = [ srgb ]
+	let ui = [ Ui:C:mfm({ text: '' }) ]
+	@u() {ui[0].update({ text: [ tr().srgbcolor(), srgb_sample_mfm(srgb), tr().hsvcolor(), hsv_sample_mfm(Color:srgb_to_hsv(srgb)), tr().hlscolor(), hls_sample_mfm(Color:srgb_to_hls(srgb)), tr().ycbcrcolor(), ycbcr_sample_mfm(Color:srgb_to_ycbcr(srgb)), tr().xyycolor(), xyy_sample_mfm(Color:xyz_to_xyy(Color:srgb_to_xyz(srgb))), tr().labcolor(), lab_sample_mfm(Color:xyz_to_lab(Color:srgb_to_xyz(srgb)))].join(Str:lf) })}
+	u()
+	{ ui: ui[0], color: @(){ t[0] }, set_color: @(v){ discard(seq([ @(){ t[0] = v }, @(){ u() } ])) } }
+}
+@color_sample(name, srgb) {
+	let t = [ sample_header(name, srgb), sample_elements(srgb) ]
+	let ui = Ui:C:container({ children: [t[0].ui, t[1].ui] })
+	{ ui: ui, name: @(){ t[0].name() }, color: @(){ t[0].color() }, set_name: @(v){ discard([ t[0].set_name(v) ]) }, set_color: @(v){ discard([ t[0].set_color(v), t[1].set_color(v) ]) } }
 }
 
 @to_srgb() {
@@ -389,7 +385,7 @@
 @render_sample() {
 	submitbutton.update({disabled: true})
 	colorpicker.set_value(colorpicker.get_value())
-	Ui:render([backbutton,construct_sample('', to_srgb())])
+	Ui:render([backbutton,color_sample('', to_srgb()).ui])
 	submitbutton.update({disabled: false})
 }
 @update_colorspace(sp) {
