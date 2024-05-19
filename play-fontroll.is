@@ -2,8 +2,8 @@
 ### {
 	name: "フォント10連ガチャ！"
 	author: "zawa-ch."
-	version: "2.0.0"
-	description: "文字通りフォントの10連ガチャです。排出確率はCommon: 62.5%, $[fg.color=fc5 Uncommon: 25%], $[fg.color=5cf Rare: 10%], $[fg.color=f5c Epic: 2.5%](レアリティ選定基準は独断と偏見によるもの)です。"
+	version: "2.0.1"
+	description: "文字通りフォントの10連ガチャ。排出確率はCommon: 62.5%, $[fg.color=fc5 Uncommon: 25%], $[fg.color=5cf Rare: 10%], $[fg.color=f5c Epic: 2.5%](レアリティ選定基準は独断と偏見によるもの)です。"
 	license: {
 		name: "MIT License"
 		href: "http://www.opensource.org/licenses/mit-license.php"
@@ -50,27 +50,35 @@
 }
 }
 
-let d = Dataset:get([
-	// ここにデータソースのpage IDを記述します
-], @(l,r){ l.concat(r) })
+@__main() {
+	Ui:render([ Ui:C:mfm({ text: ['準備中……', 'しばらくお待ちください'].join(Str:lf) }) ])
+	let d = Dataset:get([
+		// ここにデータソースのpage IDを記述します
+	], @(l,r){ l.concat(r) })
+	if Core:type(d) == 'error' {
+		Mk:dialog('エラーが発生しました', `データの準備中にエラーが発生しました。{Str:lf}{d.name}: {Json:stringify(d.info)}`, 'error')
+		return d
+	}
 
-let seedtextarea = Ui:C:mfm({ text: '' })
-let resulttextarea = Ui:C:mfm({ text: '' })
-let postformbutton = Ui:C:postFormButton({ text: "投稿する", rounded: true, primary: true, form: { text: '' } })
+	let seedtextarea = Ui:C:mfm({ text: '' })
+	let resulttextarea = Ui:C:mfm({ text: '' })
+	let postformbutton = Ui:C:postFormButton({ text: "投稿する", rounded: true, primary: true, form: { text: '' } })
 
-@on_draw(result) {
-	seedtextarea.update({ text: `<small><small>ID: {result.seed}</small></small>` })
-	resulttextarea.update({ text: `フォント10連ガチャ結果！{Str:lf}{result.to_mfm()}` })
-	postformbutton.update({ text: "投稿する", rounded: true, primary: true, form: { text: `フォント10連ガチャ結果！{Str:lf}{result.to_mfm()}{Str:lf}{FontRoll:hashtag()}{Str:lf}{THIS_URL}` } })
+	@on_draw(result) {
+		seedtextarea.update({ text: `<small><small>ID: {result.seed}</small></small>` })
+		resulttextarea.update({ text: `フォント10連ガチャ結果！{Str:lf}{result.to_mfm()}` })
+		postformbutton.update({ text: "投稿する", rounded: true, primary: true, form: { text: `フォント10連ガチャ結果！{Str:lf}{result.to_mfm()}{Str:lf}{FontRoll:hashtag()}{Str:lf}{THIS_URL}` } })
+	}
+
+	on_draw(FontRoll:draw(d, Util:uuid()))
+	Ui:render([
+		Ui:C:container({ children: [ resulttextarea, seedtextarea ] })
+		Ui:C:container({ align: 'center' children: [
+			Ui:C:buttons({ buttons: [
+				{ text: "引きなおす", onClick: @(){ on_draw(FontRoll:draw(d, Util:uuid())) } }
+			] }),
+			postformbutton
+		] })
+	])
 }
-
-on_draw(FontRoll:draw(d, Util:uuid()))
-Ui:render([
-	Ui:C:container({ children: [ resulttextarea, seedtextarea ] })
-	Ui:C:container({ align: 'center' children: [
-		Ui:C:buttons({ buttons: [
-			{ text: "引きなおす", onClick: @(){ on_draw(FontRoll:draw(d, Util:uuid())) } }
-		] }),
-		postformbutton
-	] })
-])
+__main()

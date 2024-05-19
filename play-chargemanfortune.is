@@ -1,0 +1,97 @@
+/// @ 0.17.0
+### {
+	name: '一日一回チャー研おみくじ'
+	author: 'zawa-ch.'
+	version: '1.0.0'
+	description: 'これから毎日チャー研見ようぜ？'
+	license: {
+		name: "MIT License"
+		href: "http://www.opensource.org/licenses/mit-license.php"
+	}
+}
+
+@chargemanfortune(seed) {
+	let dataset = [
+		{ num: 1, title: '危機!! 子供宇宙ステーション', url: 'https://youtu.be/uONfW7D_QXI', flavor: '「諸君、今から命令をすりゅ」' },
+		{ num: 2, title: '危機一髪!!', url: 'https://youtu.be/YCwofA_EpNM', flavor: '「ワッハッハッハ、実★験★大★成★功！」' },
+		{ num: 3, title: '蝶の大群が舞う', url: 'https://youtu.be/AKe3eEQPiG0', flavor: '「だがその他一切のことはわかりません！」' },
+		{ num: 4, title: '謎の美少年', url: 'https://youtu.be/VWlxRob99jQ', flavor: '「僕絶対しゃ◯らないよ」' },
+		{ num: 5, title: '恐怖！ ミイラが馬車でやってくる', url: 'https://youtu.be/-f8c5qUakCg', flavor: '「ワ カ メ」' },
+		{ num: 6, title: '怪奇！宇宙植物園', url: 'https://youtu.be/fZKO3qCWYRM', flavor: '地面:「人間たちよもっと苦しめ！」' },
+		{ num: 7, title: '西部の男・研！', url: 'https://youtu.be/ipo3ia3QHWc', flavor: '«S A I B U»' },
+		{ num: 8, title: 'ジュラル星人X 6号', url: 'https://youtu.be/KBTCyAIGuas', flavor: '「感情などという下等なものはとうの昔に忘れた筈だ！(怒り)」' },
+		{ num: 9, title: 'ジュラルモンス登場！', url: 'https://youtu.be/YO-o29Ph2Oo', flavor: '「目を集中攻撃だ！」' },
+		{ num: 10, title: 'バリカン大暴れ！', url: 'https://youtu.be/fSR40Zl0hyU', flavor: '「(説明しよう)あれは、数百年前我々人間が使っていたギロチン台！」' },
+		{ num: 11, title: '地球を守れ！', url: 'https://youtu.be/s1CKwNcZS3k', flavor: 'ﾜﾁｮﾜﾁｮﾜﾁｮﾜﾁｮ……' },
+		{ num: 12, title: '野菜サラダが食べられない', url: 'https://youtu.be/Yg-JL0oalmY', flavor: '「<small>うーん野菜か……</small>」' },
+		{ num: 13, title: '対決！海底都市', url: 'https://youtu.be/3kJvDnD6vHE', flavor: '「酸素を止めなさい！」「ふぁい！」' },
+		{ num: 14, title: '闇夜に消えた大仏', url: 'https://youtu.be/N51tIDTp-PA', flavor: '「まぁ〜、20㌍じゃしょうがないわねぇ〜」' },
+		{ num: 15, title: '美術館の怪！', url: 'https://youtu.be/BdvWIE_eZdw', flavor: '[作品A]' },
+		{ num: 16, title: '殺人レコード 恐怖のメロディ', url: 'https://youtu.be/sqIuo559HRg', flavor: '「お前たち、よくもこんなキチガイレコードを！」' },
+		{ num: 17, title: '研の秘密を探れ！', url: 'https://youtu.be/sYIZSjJE0vU', flavor: '「それは算数なんでSU！」' },
+		{ num: 18, title: '囚人島大脱走', url: 'https://youtu.be/Hj7ws3ILkT8', flavor: '「お前たちを操って人間をたくさん殺すのが目的SA！」' },
+		{ num: 19, title: '銀行ギャング キャロンが危ない！', url: 'https://youtu.be/ybRB8YjB2Zo', flavor: '「あの人質にされた女の子は？」「知 ら ん な」' },
+		{ num: 20, title: 'ガールフレンドが出来た', url: 'https://youtu.be/2UNL0S8lZGU', flavor: '「ガールフレンドができたと思ったのにな」' },
+		{ num: 21, title: 'キャロンへの贈り物', url: 'https://youtu.be/nMBB6KnyEoQ', flavor: '「おいおい、私は医者だよ？」' },
+		{ num: 22, title: '時限爆弾電送テレビ', url: 'https://youtu.be/FB-CfTcjz-o', flavor: '「これを使って日本の重要施設を爆破しゅる！」' },
+		{ num: 23, title: '恐怖！精神病院', url: 'https://youtu.be/G6kMddFpoV0', flavor: '「$[ruby 精神病院 こんなところ]へお前を潜り込ませたのは無駄じゃなかったんだな」' },
+		{ num: 24, title: 'ロボットクラブへの招待状', url: 'https://youtu.be/U73lsioqwR4', flavor: '「チャージマン研 ここで俺たちと一緒に眠ろう」' },
+		{ num: 25, title: '雄一少年を救え！', url: 'https://youtu.be/srOYDtgUAls', flavor: '「これから毎日家を焼こうぜ？」' },
+		{ num: 26, title: '記憶を無くした少女', url: 'https://youtu.be/aODlLZnXQHU', flavor: '「そうとわかっておれば、あの時……」' },
+		{ num: 27, title: '燃える毒きのこの家', url: 'https://youtu.be/04zrOTP35q0', flavor: 'シュワシュワシュワ……(溶ける毒きのこの家)' },
+		{ num: 28, title: '宇宙ロケットZ9号', url: 'https://youtu.be/KVt1tWv70vE', flavor: 'このバカでかい工場の中で宇宙ロケットがどんどん作られているんDA！' },
+		{ num: 29, title: 'ファッションモデルを消せ！', url: 'https://youtu.be/n6DaGqySp4I', flavor: '「チャーシューメン3ツモッテキマシタ」' },
+		{ num: 30, title: '塔上のキャロンを救え！', url: 'https://youtu.be/p3Wbu4F0NWE', flavor: '「人間の姿なんぞで死にたくは無い」' },
+		{ num: 31, title: '危機！爆破一秒前', url: 'https://youtu.be/3HVHLGWSnWU', flavor: '「そうか、口が利けないんだね さあ、何でも言ってごらんよ」' },
+		{ num: 32, title: '金庫破りの名人', url: 'https://youtu.be/483GcA1pJGg', flavor: '「これだ！ ｷﾝｾﾝｷﾝｶﾝ・ｿﾝｼﾛﾀｰﾙ」' },
+		{ num: 33, title: '僕のパパは時代おくれ？', url: 'https://youtu.be/NVxGj3tCCds', flavor: '「月にはいま、キチガイつつ……」' },
+		{ num: 34, title: 'スカイロッド 地底に突っこめ！', url: 'https://youtu.be/_MvW5Y09C6A', flavor: '「よく分からないんだけど 何の工場が出来るんですか？」' },
+		{ num: 35, title: '頭の中にダイナマイト', url: 'https://www.youtu.be/EASMIkkzIpp=iAQB', flavor: '「ボルガ博士、お許しください！」' },
+		{ num: 36, title: '戦慄！悪魔の病院', url: 'https://youtu.be/Wist7LdV3Wo', flavor: '「チャージマン、殺してやる！」「これはボクの言う言葉だ!!」' },
+		{ num: 37, title: 'ハイジャックをやっつけろ！', url: 'https://youtu.be/Ti99_B9fmo4', flavor: '「なまこわんわーん！」' },
+		{ num: 38, title: 'ジュラルのにせ友情作戦', url: 'https://youtu.be/AnB7qGd7T8U', flavor: '「デニズコードの準備ができまじでございまず」' },
+		{ num: 39, title: '美人ロボットは殺しの使者', url: 'https://youtu.be/oEy5e76W-Cs', flavor: '👩👩👩「お好みのヘアースタイルをお選びください」💺💺💺💺💺💺' },
+		{ num: 40, title: '疾走！殺人ハイウェイ', url: 'https://youtu.be/MwJonKElr7M', flavor: '「競争？ここはレース場じゃありませんよ 僕は嫌ですね！(正論)」' },
+		{ num: 41, title: 'シンデレラの少女', url: 'https://youtu.be/u2wafNSNS1g', flavor: '「やるかこの黒ゴボウ！」' },
+		{ num: 42, title: '空軍基地が狙われている！', url: 'https://youtu.be/yOU2ppnR1tc', flavor: '107F おもちゃ売場' },
+		{ num: 43, title: 'カメラのファインダーを覗け！', url: 'https://youtu.be/FLLnQLm_fG4', flavor: '「でもあの人は◯◯◯◯ とてもいい人のようだけど……」' },
+		{ num: 44, title: '研の偽物をやっつけろ！', url: 'https://youtu.be/jt4j4KTPsEo', flavor: '「これはがん細胞を消滅させる特殊光線アトスメヒだ パワーアップすれば生物はドロドロに溶けてしまう」' },
+		{ num: 45, title: '鳩時計が3時を指したら', url: 'https://youtu.be/altw6dAUGyY', flavor: '「キャロン、気でも狂ったんじゃないのか!?」' },
+		{ num: 46, title: '恐怖！ 白髪老婆の家', url: 'https://youtu.be/OEpNLiK5y20', flavor: '「研坊、毒ガスDEATHよ！」' },
+		{ num: 47, title: 'ジュラルの大逆襲', url: 'https://youtu.be/lmQFQ7dQAmE', flavor: '「気にするな！」' },
+		{ num: 48, title: '孤島の対決！', url: 'https://youtu.be/-YcTlN3tOfE', flavor: '「あいつらめ、👹じゃ〜、こんな年寄りを」' },
+		{ num: 49, title: '不良少年の正体は！', url: 'https://youtu.be/MGxyfDSzoAI', flavor: '「何をするんだ！」' },
+		{ num: 50, title: 'みなし子センターを救え！', url: 'https://youtu.be/5jNBifpecjY', flavor: 'お父さんやお母さんが死んでしまってひとりぼっちになってしまったかわいそうなお友達が大勢いるんDA!' },
+		{ num: 51, title: '捨て犬コロ', url: 'https://youtu.be/I7WOgETt5qE', flavor: '「せいぜい無邪気に遊んでおけ 憎いチャージマン研め 今日こそ奴の命を……」' },
+		{ num: 52, title: '海底油田を爆破しろ！', url: 'https://youtu.be/gc_P_VdL3Lg', flavor: '専門的なことはともかく！この巨大な石油タンク' },
+		{ num: 53, title: '怪しい花嫁', url: 'https://youtu.be/biPxOy0aeCo', flavor: '【解説】「ああ、海底局が作っている新型潜水艦を早いこと爆破させん事には俺達ジュラル星人の海底基地が発見されてしまうからな」' },
+		{ num: 54, title: '怪奇！ロウ人形館', url: 'https://youtu.be/3UkyYYahu4k', flavor: 'ここは蝋人形館 君たちの中にも行った人がいるだろう？' },
+		{ num: 55, title: 'エジプトで出会ったやつ', url: 'https://youtu.be/qzh6nSjnRMA', flavor: '「貴様達こそ、こんなところで何をしているんだ！(正論)」' },
+		{ num: 56, title: '暴走！馬上の研', url: 'https://youtu.be/T054_Wf6rqQ', flavor: '「よし暴走しろ！」' },
+		{ num: 57, title: '南極遊園地', url: 'https://youtu.be/byp8Z-RllUw', flavor: '「あ！いーっけない バリカンのこと忘れてた」' },
+		{ num: 58, title: '悪魔のサーカス団', url: 'https://youtu.be/EBbnw09_3hM', flavor: '【解説】「このアルファガンを赤い光にすると麻酔銃になるんだよ」' },
+		{ num: 59, title: '恐怖の森', url: 'https://youtu.be/fFCZnUwQ7wg', flavor: '「もう遅いわ 死んでもらおう」' },
+		{ num: 60, title: '大津波の襲撃', url: 'https://youtu.be/uyPeMMoEvmE', flavor: '「その声は千原せいじ」' },
+		{ num: 61, title: 'バリカンの旧友が尋ねて来た', url: 'https://youtu.be/hd-0YKaC2jQ', flavor: '「聞いたなコイツ！」' },
+		{ num: 62, title: '農業コンビナートの危機！', url: 'https://youtu.be/Yb4-20AjACM', flavor: '「どうだいこのだだっ広さ」' },
+		{ num: 63, title: '殺人ボクサーを倒せ！', url: 'https://youtu.be/pFrTXckskgs', flavor: '🦀「ヴオォォォォォイ!!!!!!!」' },
+		{ num: 64, title: '爆発！マンモスコントロールセンター', url: 'https://youtu.be/9_1t-scfSUg', flavor: '「こ れ は ひ ど い」' },
+		{ num: 65, title: '勝利！チャージマン研', url: 'https://youtu.be/xgv0edg4c4I', flavor: '「応援ありがとー！」' },
+	]
+	let r = Math:gen_rng(seed)
+	dataset[r(0,dataset.len-1)]
+}
+
+@draw_result(result) {
+	Ui:render([
+		Ui:C:mfm({ text: `今日のチャージマン研！は……{Str:lf}第{result.num}回{Str:lf}$[tada.speed=0s [{result.title}]({result.url})]{Str:lf}{result.flavor}` }),
+		Ui:C:container({ align: 'center', children: [ Ui:C:postFormButton({ text: 'チャージン……GO!!!', primary: true, form: { text: `今日のチャージマン研！は……{Str:lf}第{result.num}回{Str:lf}$[tada.speed=0s [{result.title}]({result.url})]{Str:lf}{THIS_URL}` } }) ] }) 
+	])
+}
+
+@__main() {
+	let d = Date:now()
+	let r = chargemanfortune(`{USER_USERNAME}:{Date:year(d)}:{Date:month(d)}:{Date:day(d)}`)
+	draw_result(r)
+}
+__main()
