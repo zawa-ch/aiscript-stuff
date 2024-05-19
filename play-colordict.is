@@ -1,9 +1,9 @@
-// 0.17.0
+// @ 0.17.0
 ### {
 	name: 'Color Dictionary'
 	author: 'zawa-ch.'
 	description: '色のサンプルとその要素'
-	version: '1.0.2'
+	version: '1.0.3'
 	license: {
 		name: "MIT License"
 		href: "http://www.opensource.org/licenses/mit-license.php"
@@ -12,12 +12,13 @@
 
 // color.is
 // 色空間の相互変換を行うライブラリ
-// version 1.0.2
+// version 1.0.3
 // Copyright 2024 zawa-ch. licensed under MIT License
 
 :: Color {
 @srgb(r,g,b) {{red: r, green: g, blue: b}}
 @is_srgb(o) { (Core:type(o)=='obj')&&(Obj:has(o,'red'))&&(Core:type(o.red)=='num')&&(Obj:has(o,'green'))&&(Core:type(o.green)=='num')&&(Obj:has(o,'blue'))&&(Core:type(o.blue)=='num') }
+@is_insrgbgamut(c) { (is_srgb(c))&&(c.red>=0)&&(c.red<=1)&&(c.green>=0)&&(c.green<=1)&&(c.blue>=0)&&(c.blue<=1) }
 @hsv(h,s,v) {{hue: h, saturation: s, value: v}}
 @is_hsv(o) { (Core:type(o)=='obj')&&(Obj:has(o,'hue'))&&(Core:type(o.hue)=='num')&&(Obj:has(o,'saturation'))&&(Core:type(o.saturation)=='num')&&(Obj:has(o,'value'))&&(Core:type(o.value)=='num') }
 @hls(h,l,s) {{hue: h, saturation: s, lightness: l}}
@@ -143,6 +144,8 @@
 }
 }
 
+@discard(value) {null}
+@seq(arr_f) {arr_f.reduce(@(b,c,i){b.concat([c()])},[])}
 @fast_construct(list) {
 	match Core:type(list) {
 		'obj' => Obj:kvs(list).map(@(i){ [i[0], i[1]()] }).reduce(@(b,c,i){
@@ -153,241 +156,170 @@
 		* => list
 	}
 }
-	
+
 @tr() {{
+	elements: @(){'色要素'}
+	scheme: @(){'配色'}
 	colorspace: @(){'色空間'}
 	sample: @(){'サンプル'}
+	scale: @(){'スケール'}
 	hexcolor: @(){'16進数'}
 	srgbcolor: @(){'sRGB'}
-	srgb_r: @(){ '赤' }
-	srgb_g: @(){ '緑' }
-	srgb_b: @(){ '青' }
+	srgb_r: @(){'赤'}
+	srgb_g: @(){'緑'}
+	srgb_b: @(){'青'}
 	hsvcolor: @(){'HSV'}
-	hsv_h: @(){ '色相' }
-	hsv_s: @(){ '彩度' }
-	hsv_v: @(){ '明度' }
+	hsv_h: @(){'色相'}
+	hsv_s: @(){'彩度'}
+	hsv_v: @(){'明度'}
 	hlscolor: @(){'HLS'}
-	hls_h: @(){ '色相' }
-	hls_l: @(){ '輝度' }
-	hls_s: @(){ '彩度' }
+	hls_h: @(){'色相'}
+	hls_l: @(){'輝度'}
+	hls_s: @(){'彩度'}
 	ycbcrcolor: @(){'YCbCr'}
-	ycbcr_y: @(){ '輝度' }
-	ycbcr_b: @(){ '青色差' }
-	ycbcr_r: @(){ '赤色差' }
+	ycbcr_y: @(){'輝度'}
+	ycbcr_b: @(){'青色差'}
+	ycbcr_r: @(){'赤色差'}
 	xyycolor: @(){'CIE xyY (D65光源, 2°標準観測者)'}
-	xyy_x: @(){ 'x位置' }
-	xyy_y: @(){ 'y位置' }
-	xyy_l: @(){ '輝度' }
+	xyy_x: @(){'x位置'}
+	xyy_y: @(){'y位置'}
+	xyy_l: @(){'輝度'}
 	labcolor: @(){'CIE L*a*b*'}
-	lab_l: @(){ '輝度' }
-	lab_a: @(){ 'a*位置' }
-	lab_b: @(){ 'b*位置' }
-	percent: @(){ '百分率' }
-	permill: @(){ '千分率' }
-	notes_title: @(){ '注意事項' }
+	lab_l: @(){'輝度'}
+	lab_a: @(){'a*位置'}
+	lab_b: @(){'b*位置'}
+	out_gamut: @() {'sRGB色域外'}
+	scheme_complementary: @() {'Complementary'}
+	scheme_triads: @() {'Triads'}
+	scheme_analogous: @() {'Analogous'}
+	scheme_splitcomp: @() {'Split Complementary'}
+	scheme_tetrad: @() {'Tetrad'}
+	scheme_pentad: @() {'Pentad'}
+	scheme_hexad: @() {'Hexad'}
+	notes_title: @(){'注意事項'}
 	notes_content: @(){ [
 		'このAiScriptで得られる値の精度についての保証はありません。あくまで参考程度にご活用ください。'
 	].join(Str:lf) }
 }}
+@sample_container(rgb) {
+	let i = Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})
+	@u(v) {i.update({bgColor: `rgb({v.red*100}%,{v.green*100}%,{v.blue*100}%)`})}
+	u(rgb)
+	{ui: i, update: u}
+}
+@color_tag_text(name, srgb) {
+	@f() { if Color:srgb_to_xyz(srgb).y>0.5 {'000'} else {'fff'} }
+	@t() {
+		if name.len > 0 { name }
+		elif Color:is_insrgbgamut(srgb) { `{Color:srgb_to_hex24(srgb)}` }
+		else { `({tr().out_gamut()})` }
+	}
+	`$[border.width=2,radius=2,color={Color:srgb_to_hex24(srgb)} $[bg.color={Color:srgb_to_hex24(srgb)} $[fg.color={f()} {t()}]]]`
+}
+@color_list_mfm(prefix, list, joiner, on_click) {
+	let l = list.map(@(i){ Obj:merge(i, { id: Util:uuid(), text: color_tag_text(i.name, i.color) }) } )
+	Ui:C:mfm({ text: [prefix, Str:lf, l.map(@(i){ `$[clickable.ev={i.id} {i.text}]` }).join(joiner)].join(), onClickEv: @(e){ if Core:type(on_click)=='fn' && l.filter(@(i){ i.id == e }).len==1 { on_click(l.filter(@(i){ i.id == e })[0]) } } })
+}
+@hexvalueinput(label_text, value, on_input) {
+	var t = [value]
+	let i = Ui:C:textInput({ label: label_text, default: value, onInput: @(v){ if Core:type(Color:hex_to_srgb(v))!='error' {seq([@(){t[0]=v}, @(){ if Core:type(on_input)=='fn' {on_input(v)} }])} } })
+	{ ui: i, value: @(){t[0]}, set_value: @(v){ discard(seq([@(){t[0]=v}, @(){ i.update({default: v}) }])) } }
+}
+@numvalueinput(label_text, value, on_input) {
+	var t = [value]
+	let i = Ui:C:numberInput({ label: label_text, default: value, onInput: @(v){ seq([@(){t[0]=v}, @(){ if Core:type(on_input)=='fn' {on_input(v)} }]) } })
+	{ ui: i, value: @(){t[0]}, set_value: @(v){ discard(seq([@(){t[0]=v}, @(){ i.update({default: v}) }])) } }
+}
+@loopvalueinput(label_text, value, max, on_input) {
+	@r(v){if v>=0 { v%max } elif v<0 { (v%max)+max } else { v }}
+	var t = [value]
+	let i = Ui:C:numberInput({ label: `{label_text}(0..{max})`, default: value, onInput: @(v){ seq([@(){t[0]=r(v)}, @(){ if v!=(r(v)) { i.update({default: r(v)}) } }, @(){ if Core:type(on_input)=='fn' {on_input(r(v))} }]) } })
+	{ ui: i, value: @(){t[0]}, set_value: @(v){ discard(seq([@(){t[0]=r(v)}, @(){ i.update({default: r(v)}) }])) } }
+}
+@scalevalueinput(label_text, value, scale, on_input) {
+	var t = [value, scale]
+	let i = Ui:C:numberInput({ label: `{label_text}(1/{scale})`, default: value*scale, onInput: @(v){ seq([@(){t[0]=v/t[1]}, @(){ if Core:type(on_input)=='fn' {on_input(v/t[1])} }]) } })
+	{ ui: i, value: @(){t[0]}, scale: @(){t[1]}, set_value: @(v){ discard(seq([@(){t[0]=v}, @(){ i.update({default: v*t[1]}) }])) }, set_scale: @(v){ discard(seq([@(){t[1]=v}, @(){ i.update({label: `{label_text}(1/{v})`, default: t[0]*v}) }])) } }
+}
+@scaleselect(label_text, items, iv, on_change) { Ui:C:select({label: label_text, items: items.map(@(i){{text: `0..{i}`, value: i.to_str()}}), default: iv.to_str(), onChange: @(v){ if Core:type(on_change)=='fn' { on_change(v.to_num()) } }}) }
 @hexinput(iv) {
-	var value = if Core:type(Color:hex_to_srgb(iv))!='error' {iv} else {''}
-	@to_srgb() {if Core:type(Color:hex_to_srgb(value))!='error' {Color:hex_to_srgb(value)} else {Color:srgb(0,0,0)}}
-	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
-	@update_form() { f.input.update({default: value}) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input: @(){Ui:C:textInput({label: tr().hexcolor(), default: value, onInput: @(v){
-			value = v
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() { if Core:type(Color:hex_to_srgb(f[1].value()))!='error' {Color:hex_to_srgb(f[1].value())} else {Color:srgb(0,0,0)} }
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [sample_container(Color:srgb(0,0,0)), hexvalueinput(tr().hexcolor(), if Core:type(Color:hex_to_srgb(iv))!='error' {iv} else {'000000'}, @(v){ update_sample() })]
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){value}
-		set_value: @(v){ if Core:type(Color:hex_to_srgb(v))!='error' {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [f[1].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ f[1].value() }
+		set_value: @(v){if Core:type(Color:hex_to_srgb(v))!='error' { discard(seq([@(){f[1].set_value(v)}, update_sample])) } }
 	}
 }
 @srgbinput(iv) {
-	var value = if Color:is_srgb(iv) {iv} else {Color:srgb(0,0,0)}
-	@update_sample() { f.sample.update({bgColor: `rgb({value.red*100}%,{value.green*100}%,{value.blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_r.update({default: value.red*100})},@(){f.input_g.update({default: value.green*100})},@(){f.input_b.update({default: value.blue*100})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_r: @(){Ui:C:numberInput({label: tr().srgb_r(), default: value.red*100, onInput: @(v){
-			value.red = v/100
-			update_sample()
-		}})}
-		input_g: @(){Ui:C:numberInput({label: tr().srgb_g(), default: value.green*100, onInput: @(v){
-			value.green = v/100
-			update_sample()
-		}})}
-		input_b: @(){Ui:C:numberInput({label: tr().srgb_b(), default: value.blue*100, onInput: @(v){
-			value.blue = v/100
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() { Color:srgb(f[1].value(), f[2].value(), f[3].value()) }
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [ sample_container(Color:srgb(0,0,0)), scalevalueinput(tr().srgb_r(), iv.red, 100, @(){ update_sample() }), scalevalueinput(tr().srgb_g(), iv.green, 100, @(){ update_sample() }), scalevalueinput(tr().srgb_b(), iv.blue, 100, @(){ update_sample() }) ]
+	let sc = scaleselect(tr().scale(), [15, 100, 255, 65535], 100,  @(v){[ f[1].set_scale(v), f[2].set_scale(v), f[3].set_scale(v) ]})
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_r,f.input_g,f.input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_srgb(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [sc,f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:srgb(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_srgb(v) { discard(seq([@(){[ f[1].set_value(v.red), f[2].set_value(v.green), f[3].set_value(v.blue) ]}, update_sample])) } }
 	}
 }
 @hsvinput(iv) {
-	var value = if Color:is_hsv(iv) {iv} else {Color:hsv(0,0,0)}
-	@to_srgb() {Color:hsv_to_srgb(value)}
-	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_h.update({default: value.hue})},@(){f.input_s.update({default: value.saturation*100})},@(){f.input_v.update({default: value.value*100})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_h: @(){Ui:C:numberInput({label: tr().hsv_h(), default: value.hue, onInput: @(v){
-			value.hue = v%360
-			update_sample()
-		}})}
-		input_s: @(){Ui:C:numberInput({label: tr().hsv_s(), default: value.saturation*100, onInput: @(v){
-			value.saturation = v/100
-			update_sample()
-		}})}
-		input_v: @(){Ui:C:numberInput({label: tr().hsv_v(), default: value.value*100, onInput: @(v){
-			value.value = v/100
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() {Color:hsv_to_srgb(Color:hsv(f[1].value(), f[2].value(), f[3].value()))}
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [ sample_container(Color:srgb(0,0,0)), loopvalueinput(tr().hsv_h(), iv.hue, 360, @(){ update_sample() }), scalevalueinput(tr().hsv_s(), iv.saturation, 100, @(){ update_sample() }), scalevalueinput(tr().hsv_v(), iv.value, 100, @(){ update_sample() }) ]
+	let sc = scaleselect(tr().scale(), [15, 100, 255, 65535], 100,  @(v){[ f[2].set_scale(v), f[3].set_scale(v) ]})
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_h,f.input_s,f.input_v,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_hsv(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [sc,f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:hsv(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_hsv(v) { discard(seq([@(){[ f[1].set_value(v.hue), f[2].set_value(v.saturation), f[3].set_value(v.value) ]}, update_sample])) } }
 	}
 }
 @hlsinput(iv) {
-	var value = if Color:is_hls(iv) {iv} else {Color:hls(0,0,0)}
-	@to_srgb() {Color:hls_to_srgb(value)}
-	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_h.update({default: value.hue})},@(){f.input_l.update({default: value.lightness*100})},@(){f.input_s.update({default: value.saturation*100})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_h: @(){Ui:C:numberInput({label: tr().hls_h(), default: value.hue, onInput: @(v){
-			value.hue = v%360
-			update_sample()
-		}})}
-		input_l: @(){Ui:C:numberInput({label: tr().hls_l(), default: value.lightness*100, onInput: @(v){
-			value.lightness = v/100
-			update_sample()
-		}})}
-		input_s: @(){Ui:C:numberInput({label: tr().hls_s(), default: value.saturation*100, onInput: @(v){
-			value.saturation = v/100
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() {Color:hls_to_srgb(Color:hls(f[1].value(), f[2].value(), f[3].value()))}
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [ sample_container(Color:srgb(0,0,0)), loopvalueinput(tr().hls_h(), iv.hue, 360, @(){ update_sample() }), scalevalueinput(tr().hls_l(), iv.lightness, 100, @(){ update_sample() }), scalevalueinput(tr().hls_s(), iv.saturation, 100, @(){ update_sample() }) ]
+	let sc = scaleselect(tr().scale(), [15, 100, 255, 65535], 100,  @(v){[ f[2].set_scale(v), f[3].set_scale(v) ]})
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_h,f.input_l,f.input_s,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_hsv(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [sc,f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:hls(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_hls(v) { discard(seq([@(){[ f[1].set_value(v.hue), f[2].set_value(v.lightness), f[3].set_value(v.saturation) ]}, update_sample])) } }
 	}
 }
 @ycbcrinput(iv) {
-	var value = if Color:is_ycbcr(iv) {iv} else {Color:ycbcr(0,0,0)}
-	@to_srgb() {Color:ycbcr_to_srgb(value)}
-	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_y.update({default: value.illuminance*100})},@(){f.input_b.update({default: value.cb*100})},@(){f.input_r.update({default: value.cr*100})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_y: @(){Ui:C:numberInput({label: tr().ycbcr_y(), default: value.illuminance*100, onInput: @(v){
-			value.illuminance = v/100
-			update_sample()
-		}})}
-		input_b: @(){Ui:C:numberInput({label: tr().ycbcr_b(), default: value.cb*100, onInput: @(v){
-			value.cb = v/100
-			update_sample()
-		}})}
-		input_r: @(){Ui:C:numberInput({label: tr().ycbcr_r(), default: value.cr*100, onInput: @(v){
-			value.cr = v/100
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() {Color:ycbcr_to_srgb(Color:ycbcr(f[1].value(), f[2].value(), f[3].value()))}
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [ sample_container(Color:srgb(0,0,0)), scalevalueinput(tr().ycbcr_y(), iv.illuminance, 100, @(){ update_sample() }), scalevalueinput(tr().ycbcr_b(), iv.cb, 100, @(){ update_sample() }), scalevalueinput(tr().ycbcr_r(), iv.cr, 100, @(){ update_sample() }) ]
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_y,f.input_b,f.input_r,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_ycbcr(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:ycbcr(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_ycbcr(v) { discard(seq([@(){[ f[1].set_value(v.illuminance), f[2].set_value(v.cb), f[3].set_value(v.cr) ]}, update_sample])) } }
 	}
 }
 @xyyinput(iv) {
-	var value = if Color:is_xyy(iv) {iv} else {Color:xyy(0.3333,0.3333,0)}
-	@to_srgb() {Color:xyz_to_srgb(Color:xyy_to_xyz(value))}
-	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_x.update({default: value.point_x*1000})},@(){f.input_y.update({default: value.point_y*1000})},@(){f.input_l.update({default: value.illuminance*100})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_x: @(){Ui:C:numberInput({label: tr().xyy_x(), default: value.point_x*1000, onInput: @(v){
-			value.point_x = v/1000
-			update_sample()
-		}})}
-		input_y: @(){Ui:C:numberInput({label: tr().xyy_y(), default: value.point_y*1000, onInput: @(v){
-			value.point_y = v/1000
-			update_sample()
-		}})}
-		input_l: @(){Ui:C:numberInput({label: tr().xyy_l(), default: value.illuminance*100, onInput: @(v){
-			value.illuminance = v/100
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() {Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(f[1].value(), f[2].value(), f[3].value())))}
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [ sample_container(Color:srgb(0,0,0)), scalevalueinput(tr().xyy_x(), iv.point_x, 1000, @(){ update_sample() }), scalevalueinput(tr().xyy_y(), iv.point_y, 1000, @(){ update_sample() }), scalevalueinput(tr().xyy_l(), iv.illuminance, 100, @(){ update_sample() }) ]
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_x,f.input_y,f.input_l,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_xyy(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:xyy(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_xyy(v) { discard(seq([@(){[ f[1].set_value(v.point_x), f[2].set_value(v.point_y), f[3].set_value(v.illuminance) ]}, update_sample])) } }
 	}
 }
 @labinput(iv) {
-	var value = if Color:is_lab(iv) {iv} else {Color:lab(0,0,0)}
-	@to_srgb() {Color:xyz_to_srgb(Color:lab_to_xyz(value))}
-	@update_sample() { f.sample.update({bgColor: `rgb({to_srgb().red*100}%,{to_srgb().green*100}%,{to_srgb().blue*100}%)`}) }
-	@update_form() { fast_construct([@(){f.input_l.update({default: value.l_star})},@(){f.input_a.update({default: value.a_star})},@(){f.input_b.update({default: value.b_star})}]) }
-	let f = fast_construct({
-		sample: @(){Ui:C:container({children: [], bgColor: '#000', borderWidth: 1, padding: 12, rounded: true, hidden: false})}
-		input_l: @(){Ui:C:numberInput({label: tr().lab_l(), default: value.l_star, onInput: @(v){
-			value.l_star = v
-			update_sample()
-		}})}
-		input_a: @(){Ui:C:numberInput({label: tr().lab_a(), default: value.a_star, onInput: @(v){
-			value.a_star = v
-			update_sample()
-		}})}
-		input_b: @(){Ui:C:numberInput({label: tr().lab_b(), default: value.b_star, onInput: @(v){
-			value.b_star = v
-			update_sample()
-		}})}
-	})
-	fast_construct([update_form, update_sample])
+	@to_srgb() {Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(f[1].value(), f[2].value(), f[3].value())))}
+	@update_sample() {f[0].update(to_srgb())}
+	let f = [ sample_container(Color:srgb(0,0,0)), numvalueinput(tr().lab_l(), iv.l_star, @(){ update_sample() }), numvalueinput(tr().lab_a(), iv.a_star, @(){ update_sample() }), numvalueinput(tr().lab_b(), iv.b_star, @(){ update_sample() }) ]
+	update_sample()
 	{
-		form: Ui:C:container({children: [f.input_l,f.input_a,f.input_b,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f.sample]})]})
-		get_value: @(){Obj:copy(value)}
-		set_value: @(v){ if Color:is_lab(v) {
-			value = v
-			fast_construct([update_form, update_sample])
-		} }
+		form: Ui:C:container({children: [f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		get_value: @(){ Color:lab(f[1].value(), f[2].value(), f[3].value()) }
+		set_value: @(v){ if Color:is_lab(v) { discard(seq([@(){[ f[1].set_value(v.l_star), f[2].set_value(v.a_star), f[3].set_value(v.b_star) ]}, update_sample])) } }
 	}
 }
 @round_str(num,p) {
@@ -401,101 +333,79 @@
 		Math:round(num).to_str()
 	}
 }
-@construct_sample(name,srgb) {
-	let wp = Color:whitepoint()
-	let color = fast_construct({
-		srgb: @() { srgb }
-		hex: @() { Color:srgb_to_hex24(srgb) }
-		hsv: @() { Color:srgb_to_hsv(srgb) }
-		hls: @() { Color:srgb_to_hls(srgb) }
-		ycbcr: @() { Color:srgb_to_ycbcr(srgb) }
-		xyy: @() { Color:xyz_to_xyy(Color:srgb_to_xyz(srgb)) }
-		lab: @() { Color:xyz_to_lab(Color:srgb_to_xyz(srgb)) }
-	})
-	let bg = fast_construct({
-		is_bright: @() { color.xyy.illuminance>0.5 }
-		lab: @(){ fast_construct({
-			l: @(){ Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(color.lab.l_star,0,0))) }
-			a: @(){ Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(color.lab.l_star,color.lab.a_star,0))) }
-			b: @(){ Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(color.lab.l_star,0,color.lab.b_star))) }
-		}) }
-		xyy: @(){ fast_construct({
-			x: @(){ Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(color.xyy.point_x,Color:xyz_to_xyy(wp).point_y,color.xyy.illuminance))) }
-			y: @(){ Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(Color:xyz_to_xyy(wp).point_x,color.xyy.point_y,color.xyy.illuminance))) }
-			l: @(){ Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(Color:xyz_to_xyy(wp).point_x,Color:xyz_to_xyy(wp).point_y,color.xyy.illuminance))) }
-		}) }
-		rgb: @(){ fast_construct({
-			r: @(){ Color:srgb(color.srgb.red,0,0) }
-			r_is_bright: @(){ Color:srgb_to_xyz(Color:srgb(color.srgb.red,0,0)).y>0.5 }
-			g: @(){ Color:srgb(0,color.srgb.green,0) }
-			g_is_bright: @(){ Color:srgb_to_xyz(Color:srgb(0,color.srgb.green,0)).y>0.5 }
-			b: @(){ Color:srgb(0,0,color.srgb.blue) }
-			b_is_bright: @(){ Color:srgb_to_xyz(Color:srgb(0,0,color.srgb.blue)).y>0.5 }
-		}) }
-		ybr: @(){ fast_construct({
-			y: @(){ Color:ycbcr_to_srgb(Color:ycbcr(color.ycbcr.illuminance,0,0)) }
-			b: @(){ Color:ycbcr_to_srgb(Color:ycbcr(color.ycbcr.illuminance,color.ycbcr.cb,0)) }
-			r: @(){ Color:ycbcr_to_srgb(Color:ycbcr(color.ycbcr.illuminance,0,color.ycbcr.cr)) }
-		}) }
-		hsv: @(){ fast_construct({
-			h: @(){ Color:hsv_to_srgb(Color:hsv(color.hsv.hue,1,1)) }
-			h_is_bright: @(){ Color:srgb_to_xyz(Color:hsv_to_srgb(Color:hsv(color.hsv.hue,1,1))).y>0.5 }
-			s: @(){ Color:hsv_to_srgb(Color:hsv(color.hsv.hue,color.hsv.saturation,1)) }
-			s_is_bright: @(){ Color:srgb_to_xyz(Color:hsv_to_srgb(Color:hsv(color.hsv.hue,color.hsv.saturation,1))).y>0.5 }
-			v: @(){ Color:hsv_to_srgb(Color:hsv(0,0,color.hsv.value)) }
-			v_is_bright: @(){ Color:srgb_to_xyz(Color:hsv_to_srgb(Color:hsv(0,0,color.hsv.value))).y>0.5 }
-		}) }
-		hls: @(){ fast_construct({
-			h: @(){ Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,1)) }
-			h_is_bright: @(){ Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,1))).y>0.5 }
-			l: @(){ Color:hls_to_srgb(Color:hls(0,color.hls.lightness,0)) }
-			l_is_bright: @(){ Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(0,color.hls.lightness,0))).y>0.5 }
-			s: @(){ Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,color.hls.saturation)) }
-			s_is_bright: @(){ Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(color.hls.hue,0.5,color.hls.saturation))).y>0.5 }
-		}) }
-	})
-	Ui:C:container({children: fast_construct([
-		@(){ Ui:C:container({bgColor: `rgb({color.srgb.red*100}%,{color.srgb.green*100}%,{color.srgb.blue*100}%)`, padding: 8, children: [
-			Ui:C:mfm({text: name, color: if bg.is_bright {'#000'} else {'#FFF'}, size: 2}),
-			Ui:C:text({text: `#{color.hex}`, color: if bg.is_bright {'#000'} else {'#FFF'}, size: if name.len>0 {0.8} else {2} }),
-		]}) }
-		@(){ Ui:C:container({children: [
-			Ui:C:text({text: tr().srgbcolor()}),
-			Ui:C:container({bgColor: `rgb({bg.rgb.r.red*100}%,{bg.rgb.r.green*100}%,{bg.rgb.r.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_r()}: {round_str(color.srgb.red,3)}`, color: if bg.rgb.r_is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.rgb.g.red*100}%,{bg.rgb.g.green*100}%,{bg.rgb.g.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_g()}: {round_str(color.srgb.green,3)}`, color: if bg.rgb.g_is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.rgb.b.red*100}%,{bg.rgb.b.green*100}%,{bg.rgb.b.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().srgb_b()}: {round_str(color.srgb.blue,3)}`, color: if bg.rgb.b_is_bright {'#000'} else {'#FFF'}})]}),
-		]}) }
-		@(){ Ui:C:container({children: [
-			Ui:C:text({text: tr().hsvcolor()}),
-			Ui:C:container({bgColor: `rgb({bg.hsv.h.red*100}%,{bg.hsv.h.green*100}%,{bg.hsv.h.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_h()}: {round_str(color.hsv.hue,1)} degree`, color: if bg.hsv.h_is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.hsv.s.red*100}%,{bg.hsv.s.green*100}%,{bg.hsv.s.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_s()}: {round_str(color.hsv.saturation,3)}`, color: if bg.hsv.s_is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.hsv.v.red*100}%,{bg.hsv.v.green*100}%,{bg.hsv.v.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hsv_v()}: {round_str(color.hsv.value,3)}`, color: if bg.hsv.v_is_bright {'#000'} else {'#FFF'}})]}),
-		]}) }
-		@(){ Ui:C:container({children: [
-			Ui:C:text({text: tr().hlscolor()}),
-			Ui:C:container({bgColor: `rgb({bg.hls.h.red*100}%,{bg.hls.h.green*100}%,{bg.hls.h.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_h()}: {round_str(color.hls.hue,1)} degree`, color: if bg.hls.h_is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.hls.l.red*100}%,{bg.hls.l.green*100}%,{bg.hls.l.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_l()}: {round_str(color.hls.lightness,3)}`, color: if bg.hls.l_is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.hls.s.red*100}%,{bg.hls.s.green*100}%,{bg.hls.s.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().hls_s()}: {round_str(color.hls.saturation,3)}`, color: if bg.hls.s_is_bright {'#000'} else {'#FFF'}})]}),
-		]}) }
-		@(){ Ui:C:container({children: [
-			Ui:C:text({text: tr().ycbcrcolor()}),
-			Ui:C:container({bgColor: `rgb({bg.ybr.y.red*100}%,{bg.ybr.y.green*100}%,{bg.ybr.y.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_y()}: {round_str(color.ycbcr.illuminance,3)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.ybr.b.red*100}%,{bg.ybr.b.green*100}%,{bg.ybr.b.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_b()}: {round_str(color.ycbcr.cb,3)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.ybr.r.red*100}%,{bg.ybr.r.green*100}%,{bg.ybr.r.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().ycbcr_r()}: {round_str(color.ycbcr.cr,3)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-		]}) }
-		@(){ Ui:C:container({children: [
-			Ui:C:text({text: tr().xyycolor()}),
-			Ui:C:container({bgColor: `rgb({bg.xyy.x.red*100}%,{bg.xyy.x.green*100}%,{bg.xyy.x.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_x()}: {round_str(color.xyy.point_x,4)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.xyy.y.red*100}%,{bg.xyy.y.green*100}%,{bg.xyy.y.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_y()}: {round_str(color.xyy.point_y,4)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.xyy.l.red*100}%,{bg.xyy.l.green*100}%,{bg.xyy.l.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().xyy_l()}: {round_str(color.xyy.illuminance,4)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-		]}) }
-		@(){ Ui:C:container({children: [
-			Ui:C:text({text: tr().labcolor()}),
-			Ui:C:container({bgColor: `rgb({bg.lab.l.red*100}%,{bg.lab.l.green*100}%,{bg.lab.l.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_l()}: {round_str(color.lab.l_star,2)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.lab.a.red*100}%,{bg.lab.a.green*100}%,{bg.lab.a.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_a()}: {round_str(color.lab.a_star,2)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-			Ui:C:container({bgColor: `rgb({bg.lab.b.red*100}%,{bg.lab.b.green*100}%,{bg.lab.b.blue*100}%)`, padding: 1, children: [ Ui:C:text({text: `{tr().lab_b()}: {round_str(color.lab.b_star,2)}`, color: if bg.is_bright {'#000'} else {'#FFF'}})]}),
-		]}) }
-	])})
+@sround_str(num,p) {
+	if num==0&&(Math:trunc(p)>0) {
+		[ '0.', Core:range(1,Math:trunc(p)).map(@(i){'0'}).join() ].join()
+	} elif num>0&&num<Math:Infinity&&(Math:trunc(p)>0) {
+		let s = Math:round(Core:range(1,Math:trunc(p)).reduce(@(b,c,i){b*10},num)).to_str()
+		[ '+', if s.len>Math:trunc(p) {''} else {'0'}, s.slice(0,s.len-Math:trunc(p)), '.', if s.len>=Math:trunc(p) {''} else {Core:range(1,Math:trunc(p)-s.len).map(@(i){'0'}).join()}, s.slice(s.len-Math:trunc(p),s.len) ].join()
+	} elif num<0&&num>(0-Math:Infinity)&&(Math:trunc(p)>0) {
+		let s = Math:round(Core:range(1,Math:trunc(p)).reduce(@(b,c,i){b*10},0-num)).to_str()
+		[ '-', if s.len>Math:trunc(p) {''} else {'0'}, s.slice(0,s.len-Math:trunc(p)), '.', if s.len>=Math:trunc(p) {''} else {Core:range(1,Math:trunc(p)-s.len).map(@(i){'0'}).join()}, s.slice(s.len-Math:trunc(p),s.len) ].join()
+	} else {
+		Math:round(num).to_str()
+	}
+}
+@srgb_sample_mfm(srgb) {
+	let t = [ Color:srgb_to_hex24(Color:srgb(srgb.red,0,0)), Color:srgb_to_hex24(Color:srgb(0,srgb.green,0)), Color:srgb_to_hex24(Color:srgb(0,0,srgb.blue)), if Color:srgb_to_xyz(Color:srgb(srgb.red,0,0)).y>0.5 {'000'} else {'fff'}, if Color:srgb_to_xyz(Color:srgb(0,srgb.green,0)).y>0.5 {'000'} else {'fff'}, if Color:srgb_to_xyz(Color:srgb(0,0,srgb.blue)).y>0.5 {'000'} else {'fff'} ]
+	`$[font.monospace $[bg.color={t[0]} $[fg.color={t[3]} R {round_str(srgb.red,3)}]], $[bg.color={t[1]} $[fg.color={t[4]} G {round_str(srgb.green,3)}]], $[bg.color={t[2]} $[fg.color={t[5]} B {round_str(srgb.blue,3)}]]]`
+}
+@hsv_sample_mfm(hsv) {
+	let t = [ Color:srgb_to_hex24(Color:hsv_to_srgb(Color:hsv(hsv.hue,1,1))), Color:srgb_to_hex24(Color:hsv_to_srgb(Color:hsv(hsv.hue,hsv.saturation,1))), Color:srgb_to_hex24(Color:hsv_to_srgb(Color:hsv(0,0,hsv.value))), if Color:srgb_to_xyz(Color:hsv_to_srgb(Color:hsv(hsv.hue,1,1))).y>0.5 {'000'} else {'fff'}, if Color:srgb_to_xyz(Color:hsv_to_srgb(Color:hsv(hsv.hue,hsv.saturation,1))).y>0.5 {'000'} else {'fff'}, if Color:srgb_to_xyz(Color:hsv_to_srgb(Color:hsv(0,0,hsv.value))).y>0.5 {'000'} else {'fff'} ]
+	`$[font.monospace $[bg.color={t[0]} $[fg.color={t[3]} H {round_str(hsv.hue,1)}]], $[bg.color={t[1]} $[fg.color={t[4]} S {round_str(hsv.saturation,3)}]], $[bg.color={t[2]} $[fg.color={t[5]} V {round_str(hsv.value,3)}]]]`
+}
+@hls_sample_mfm(hls) {
+	let t = [ Color:srgb_to_hex24(Color:hls_to_srgb(Color:hls(hls.hue,0.5,1))), Color:srgb_to_hex24(Color:hls_to_srgb(Color:hls(0,hls.lightness,0))), Color:srgb_to_hex24(Color:hls_to_srgb(Color:hls(hls.hue,0.5,hls.saturation))), if Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(hls.hue,0.5,1))).y>0.5 {'000'} else {'fff'}, if Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(0,hls.lightness,0))).y>0.5 {'000'} else {'fff'}, if Color:srgb_to_xyz(Color:hls_to_srgb(Color:hls(hls.hue,0.5,hls.saturation))).y>0.5 {'000'} else {'fff'} ]
+	`$[font.monospace $[bg.color={t[0]} $[fg.color={t[3]} H {round_str(hls.hue,1)}]], $[bg.color={t[1]} $[fg.color={t[4]} L {round_str(hls.lightness,3)}]], $[bg.color={t[2]} $[fg.color={t[5]} S {round_str(hls.saturation,3)}]]]`
+}
+@ycbcr_sample_mfm(ycbcr) {
+	let t = [ Color:srgb_to_hex24(Color:ycbcr_to_srgb(Color:ycbcr(ycbcr.illuminance,0,0))), Color:srgb_to_hex24(Color:ycbcr_to_srgb(Color:ycbcr(ycbcr.illuminance,ycbcr.cb,0))), Color:srgb_to_hex24(Color:ycbcr_to_srgb(Color:ycbcr(ycbcr.illuminance,0,ycbcr.cr))), if Color:srgb_to_xyz(Color:ycbcr_to_srgb(ycbcr)).y>0.5 {'000'} else {'fff'} ]
+	`$[font.monospace $[bg.color={t[0]} $[fg.color={t[3]} Y {round_str(ycbcr.illuminance,3)}]], $[bg.color={t[1]} $[fg.color={t[3]} Cb {sround_str(ycbcr.cb,3)}]], $[bg.color={t[2]} $[fg.color={t[3]} Cr {sround_str(ycbcr.cr,3)}]]]`
+}
+@xyy_sample_mfm(xyy) {
+	let t = [ Color:srgb_to_hex24(Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(xyy.point_x,Color:xyz_to_xyy(Color:whitepoint()).point_y,xyy.illuminance)))), Color:srgb_to_hex24(Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(Color:xyz_to_xyy(Color:whitepoint()).point_x,xyy.point_y,xyy.illuminance)))), Color:srgb_to_hex24(Color:xyz_to_srgb(Color:xyy_to_xyz(Color:xyy(Color:xyz_to_xyy(Color:whitepoint()).point_x,Color:xyz_to_xyy(Color:whitepoint()).point_y,xyy.illuminance)))), if xyy.illuminance>0.5 {'000'} else {'fff'} ]
+	`$[font.monospace $[bg.color={t[0]} $[fg.color={t[3]} x {round_str(xyy.point_x,4)}]], $[bg.color={t[1]} $[fg.color={t[3]} y {round_str(xyy.point_y,4)}]], $[bg.color={t[2]} $[fg.color={t[3]} Y {round_str(xyy.illuminance,4)}]]]`
+}
+@lab_sample_mfm(lab) {
+	let t = [ Color:srgb_to_hex24(Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(lab.l_star,0,0)))), Color:srgb_to_hex24(Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(lab.l_star,lab.a_star,0)))), Color:srgb_to_hex24(Color:xyz_to_srgb(Color:lab_to_xyz(Color:lab(lab.l_star,0,lab.b_star)))), if Color:lab_to_xyz(lab).y>0.5 {'000'} else {'fff'} ]
+	`$[font.monospace $[bg.color={t[0]} $[fg.color={t[3]} L* {round_str(lab.l_star,2)}]], $[bg.color={t[1]} $[fg.color={t[3]} a* {sround_str(lab.a_star,2)}]], $[bg.color={t[2]} $[fg.color={t[3]} b* {sround_str(lab.b_star,2)}]]]`
+}
+@sample_header(name, srgb) {
+	var t = [ name, srgb ]
+	let ui = [ Ui:C:container({ padding: 8, children: [] }), Ui:C:mfm({ text: '', size: 2 }), Ui:C:text({ text: '' }) ]
+	@u() {[ ui[0].update({ bgColor: `rgb({srgb.red*100}%,{srgb.green*100}%,{srgb.blue*100}%)`, children: [ ui[1], ui[2] ] }), ui[1].update({ text: name, color: if Color:xyz_to_xyy(Color:srgb_to_xyz(srgb)).illuminance>0.5 {'#000'} else {'#FFF'} }), ui[2].update({ text: if Color:is_insrgbgamut(srgb) { `#{Color:srgb_to_hex24(srgb)}` } else { tr().out_gamut() }, color: if Color:xyz_to_xyy(Color:srgb_to_xyz(srgb)).illuminance>0.5 {'#000'} else {'#FFF'}, size: if (name.len>0)||(!Color:is_insrgbgamut(srgb)) {0.8} else {2} }) ]}
+	u()
+	{ ui: ui[0], name: @(){ t[0] }, color: @(){ t[1] }, set_name: @(v){ discard(seq([ @(){ t[0] = v }, @(){ u() } ])) }, set_color: @(v){ discard(seq([ @(){ t[1] = v }, @(){ u() } ])) } }
+}
+@sample_elements(srgb) {
+	var t = [ srgb ]
+	let ui = [ Ui:C:mfm({ text: '' }) ]
+	@u() {ui[0].update({ text: [ tr().srgbcolor(), srgb_sample_mfm(srgb), tr().hsvcolor(), hsv_sample_mfm(Color:srgb_to_hsv(srgb)), tr().hlscolor(), hls_sample_mfm(Color:srgb_to_hls(srgb)), tr().ycbcrcolor(), ycbcr_sample_mfm(Color:srgb_to_ycbcr(srgb)), tr().xyycolor(), xyy_sample_mfm(Color:xyz_to_xyy(Color:srgb_to_xyz(srgb))), tr().labcolor(), lab_sample_mfm(Color:xyz_to_lab(Color:srgb_to_xyz(srgb)))].join(Str:lf) })}
+	u()
+	{ ui: ui[0], color: @(){ t[0] }, set_color: @(v){ discard(seq([ @(){ t[0] = v }, @(){ u() } ])) } }
+}
+@sample_schemes(srgb, on_click) {
+	var t = [ srgb ]
+	let ui = [ Ui:C:container({ children: [] }) ]
+	@hue_shift(srgb, hue) {
+		let hls = Color:srgb_to_hls(srgb)
+		Color:hls_to_srgb(Color:hls(hls.hue + hue, hls.lightness, hls.saturation))
+	}
+	@complementary(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_complementary(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 180) } ], ', ', on_click) } else { null }}
+	@triads(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_triads(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 120) }, { name: '', color: hue_shift(srgb, 240) } ], ', ', on_click) } else { null }}
+	@analogous(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_analogous(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 30) }, { name: '', color: hue_shift(srgb, 330) } ], ', ', on_click) } else { null }}
+	@splitcomp(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_splitcomp(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 150) }, { name: '', color: hue_shift(srgb, 210) } ], ', ', on_click) } else { null }}
+	@tetrad(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_tetrad(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 90) }, { name: '', color: hue_shift(srgb, 180) }, { name: '', color: hue_shift(srgb, 270) } ], ', ', on_click) } else { null }}
+	@pentad(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_pentad(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 72) }, { name: '', color: hue_shift(srgb, 144) }, { name: '', color: hue_shift(srgb, 216) }, { name: '', color: hue_shift(srgb, 288) } ], ', ', on_click) } else { null }}
+	@hexad(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_hexad(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 60) }, { name: '', color: hue_shift(srgb, 120) }, { name: '', color: hue_shift(srgb, 180) }, { name: '', color: hue_shift(srgb, 240) }, { name: '', color: hue_shift(srgb, 300) } ], ', ', on_click) } else { null }}
+	@u() {ui[0].update({ children: [ complementary(t[0]), triads(t[0]), analogous(t[0]), splitcomp(t[0]), tetrad(t[0]), pentad(t[0]), hexad(t[0]) ].filter(@(i){ Core:type(i)!='null' }) })}
+	u()
+	{ ui: ui[0], color: @(){ t[0] }, set_color: @(v){ discard(seq([ @(){ t[0] = v }, @(){ u() } ])) } }
+}
+@color_sample(name, srgb) {
+	let t = [ sample_header(name, srgb), sample_elements(srgb), sample_schemes(srgb, null) ]
+	let ui = Ui:C:container({ children: [t[0].ui, Ui:C:folder({ title: tr().elements(), children: [ t[1].ui ], opened: true }), Ui:C:folder({ title: tr().scheme(), children: [ t[2].ui ], opened: true })] })
+	{ ui: ui, name: @(){ t[0].name() }, color: @(){ t[0].color() }, set_name: @(v){ discard([ t[0].set_name(v) ]) }, set_color: @(v){ discard([ t[0].set_color(v), t[1].set_color(v), t[2].set_color(v) ]) } }
 }
 
 @to_srgb() {
@@ -516,7 +426,7 @@
 @render_sample() {
 	submitbutton.update({disabled: true})
 	colorpicker.set_value(colorpicker.get_value())
-	Ui:render([backbutton,construct_sample('', to_srgb())])
+	Ui:render([backbutton,color_sample('', to_srgb()).ui])
 	submitbutton.update({disabled: false})
 }
 @update_colorspace(sp) {
