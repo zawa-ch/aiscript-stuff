@@ -158,36 +158,45 @@
 }
 
 @tr() {{
+	elements: @(){'色要素'}
+	scheme: @(){'配色'}
 	colorspace: @(){'色空間'}
 	sample: @(){'サンプル'}
 	scale: @(){'スケール'}
 	hexcolor: @(){'16進数'}
 	srgbcolor: @(){'sRGB'}
-	srgb_r: @(){ '赤' }
-	srgb_g: @(){ '緑' }
-	srgb_b: @(){ '青' }
+	srgb_r: @(){'赤'}
+	srgb_g: @(){'緑'}
+	srgb_b: @(){'青'}
 	hsvcolor: @(){'HSV'}
-	hsv_h: @(){ '色相' }
-	hsv_s: @(){ '彩度' }
-	hsv_v: @(){ '明度' }
+	hsv_h: @(){'色相'}
+	hsv_s: @(){'彩度'}
+	hsv_v: @(){'明度'}
 	hlscolor: @(){'HLS'}
-	hls_h: @(){ '色相' }
-	hls_l: @(){ '輝度' }
-	hls_s: @(){ '彩度' }
+	hls_h: @(){'色相'}
+	hls_l: @(){'輝度'}
+	hls_s: @(){'彩度'}
 	ycbcrcolor: @(){'YCbCr'}
-	ycbcr_y: @(){ '輝度' }
-	ycbcr_b: @(){ '青色差' }
-	ycbcr_r: @(){ '赤色差' }
+	ycbcr_y: @(){'輝度'}
+	ycbcr_b: @(){'青色差'}
+	ycbcr_r: @(){'赤色差'}
 	xyycolor: @(){'CIE xyY (D65光源, 2°標準観測者)'}
-	xyy_x: @(){ 'x位置' }
-	xyy_y: @(){ 'y位置' }
-	xyy_l: @(){ '輝度' }
+	xyy_x: @(){'x位置'}
+	xyy_y: @(){'y位置'}
+	xyy_l: @(){'輝度'}
 	labcolor: @(){'CIE L*a*b*'}
-	lab_l: @(){ '輝度' }
-	lab_a: @(){ 'a*位置' }
-	lab_b: @(){ 'b*位置' }
-	out_gamut: @() { 'sRGB色域外' }
-	notes_title: @(){ '注意事項' }
+	lab_l: @(){'輝度'}
+	lab_a: @(){'a*位置'}
+	lab_b: @(){'b*位置'}
+	out_gamut: @() {'sRGB色域外'}
+	scheme_complementary: @() {'Complementary'}
+	scheme_triads: @() {'Triads'}
+	scheme_analogous: @() {'Analogous'}
+	scheme_splitcomp: @() {'Split Complementary'}
+	scheme_tetrad: @() {'Tetrad'}
+	scheme_pentad: @() {'Pentad'}
+	scheme_hexad: @() {'Hexad'}
+	notes_title: @(){'注意事項'}
 	notes_content: @(){ [
 		'このAiScriptで得られる値の精度についての保証はありません。あくまで参考程度にご活用ください。'
 	].join(Str:lf) }
@@ -197,6 +206,19 @@
 	@u(v) {i.update({bgColor: `rgb({v.red*100}%,{v.green*100}%,{v.blue*100}%)`})}
 	u(rgb)
 	{ui: i, update: u}
+}
+@color_tag_text(name, srgb) {
+	@f() { if Color:srgb_to_xyz(srgb).y>0.5 {'000'} else {'fff'} }
+	@t() {
+		if name.len > 0 { name }
+		elif Color:is_insrgbgamut(srgb) { `{Color:srgb_to_hex24(srgb)}` }
+		else { `({tr().out_gamut()})` }
+	}
+	`$[border.width=2,radius=2,color={Color:srgb_to_hex24(srgb)} $[bg.color={Color:srgb_to_hex24(srgb)} $[fg.color={f()} {t()}]]]`
+}
+@color_list_mfm(prefix, list, joiner, on_click) {
+	let l = list.map(@(i){ Obj:merge(i, { id: Util:uuid(), text: color_tag_text(i.name, i.color) }) } )
+	Ui:C:mfm({ text: [prefix, Str:lf, l.map(@(i){ `$[clickable.ev={i.id} {i.text}]` }).join(joiner)].join(), onClickEv: @(e){ if Core:type(on_click)=='fn' && l.filter(@(i){ i.id == e }).len==1 { on_click(l.filter(@(i){ i.id == e })[0]) } } })
 }
 @hexvalueinput(label_text, value, on_input) {
 	var t = [value]
@@ -362,10 +384,28 @@
 	u()
 	{ ui: ui[0], color: @(){ t[0] }, set_color: @(v){ discard(seq([ @(){ t[0] = v }, @(){ u() } ])) } }
 }
+@sample_schemes(srgb, on_click) {
+	var t = [ srgb ]
+	let ui = [ Ui:C:container({ children: [] }) ]
+	@hue_shift(srgb, hue) {
+		let hls = Color:srgb_to_hls(srgb)
+		Color:hls_to_srgb(Color:hls(hls.hue + hue, hls.lightness, hls.saturation))
+	}
+	@complementary(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_complementary(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 180) } ], ', ', on_click) } else { null }}
+	@triads(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_triads(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 120) }, { name: '', color: hue_shift(srgb, 240) } ], ', ', on_click) } else { null }}
+	@analogous(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_analogous(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 30) }, { name: '', color: hue_shift(srgb, 330) } ], ', ', on_click) } else { null }}
+	@splitcomp(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_splitcomp(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 150) }, { name: '', color: hue_shift(srgb, 210) } ], ', ', on_click) } else { null }}
+	@tetrad(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_tetrad(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 90) }, { name: '', color: hue_shift(srgb, 180) }, { name: '', color: hue_shift(srgb, 270) } ], ', ', on_click) } else { null }}
+	@pentad(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_pentad(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 72) }, { name: '', color: hue_shift(srgb, 144) }, { name: '', color: hue_shift(srgb, 216) }, { name: '', color: hue_shift(srgb, 288) } ], ', ', on_click) } else { null }}
+	@hexad(srgb) { if Color:srgb_to_hls(srgb).saturation>0 { color_list_mfm(tr().scheme_hexad(), [ { name: '', color: srgb }, { name: '', color: hue_shift(srgb, 60) }, { name: '', color: hue_shift(srgb, 120) }, { name: '', color: hue_shift(srgb, 180) }, { name: '', color: hue_shift(srgb, 240) }, { name: '', color: hue_shift(srgb, 300) } ], ', ', on_click) } else { null }}
+	@u() {ui[0].update({ children: [ complementary(t[0]), triads(t[0]), analogous(t[0]), splitcomp(t[0]), tetrad(t[0]), pentad(t[0]), hexad(t[0]) ].filter(@(i){ Core:type(i)!='null' }) })}
+	u()
+	{ ui: ui[0], color: @(){ t[0] }, set_color: @(v){ discard(seq([ @(){ t[0] = v }, @(){ u() } ])) } }
+}
 @color_sample(name, srgb) {
-	let t = [ sample_header(name, srgb), sample_elements(srgb) ]
-	let ui = Ui:C:container({ children: [t[0].ui, t[1].ui] })
-	{ ui: ui, name: @(){ t[0].name() }, color: @(){ t[0].color() }, set_name: @(v){ discard([ t[0].set_name(v) ]) }, set_color: @(v){ discard([ t[0].set_color(v), t[1].set_color(v) ]) } }
+	let t = [ sample_header(name, srgb), sample_elements(srgb), sample_schemes(srgb, null) ]
+	let ui = Ui:C:container({ children: [t[0].ui, Ui:C:folder({ title: tr().elements(), children: [ t[1].ui ], opened: true }), Ui:C:folder({ title: tr().scheme(), children: [ t[2].ui ], opened: true })] })
+	{ ui: ui, name: @(){ t[0].name() }, color: @(){ t[0].color() }, set_name: @(v){ discard([ t[0].set_name(v) ]) }, set_color: @(v){ discard([ t[0].set_color(v), t[1].set_color(v), t[2].set_color(v) ]) } }
 }
 
 @to_srgb() {
