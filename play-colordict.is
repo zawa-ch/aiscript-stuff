@@ -244,7 +244,7 @@
 @scaleselect(label_text, items, iv, on_change) { Ui:C:select({label: label_text, items: items.map(@(i){{text: `0..{i}`, value: i.to_str()}}), default: iv.to_str(), onChange: @(v){ if Core:type(on_change)=='fn' { on_change(v.to_num()) } }}) }
 @hexinput(iv) {
 	@to_srgb() { if Core:type(Color:hex_to_srgb(f[1].value()))!='error' {Color:hex_to_srgb(f[1].value())} else {Color:srgb(0,0,0)} }
-	@update_sample() { f[0].update(to_srgb()) }
+	@update_sample() {f[0].update(to_srgb())}
 	let f = [sample_container(Color:srgb(0,0,0)), hexvalueinput(tr().hexcolor(), if Core:type(Color:hex_to_srgb(iv))!='error' {iv} else {'000000'}, @(v){ update_sample() })]
 	update_sample()
 	{
@@ -255,12 +255,12 @@
 }
 @srgbinput(iv) {
 	@to_srgb() { Color:srgb(f[1].value(), f[2].value(), f[3].value()) }
-	@update_sample() { f[0].update(to_srgb()) }
+	@update_sample() {f[0].update(to_srgb())}
 	let f = [ sample_container(Color:srgb(0,0,0)), scalevalueinput(tr().srgb_r(), iv.red, 100, @(){ update_sample() }), scalevalueinput(tr().srgb_g(), iv.green, 100, @(){ update_sample() }), scalevalueinput(tr().srgb_b(), iv.blue, 100, @(){ update_sample() }) ]
 	let sc = scaleselect(tr().scale(), [15, 100, 255, 65535], 100,  @(v){[ f[1].set_scale(v), f[2].set_scale(v), f[3].set_scale(v) ]})
 	update_sample()
 	{
-		form: Ui:C:container({children: [sc, f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
+		form: Ui:C:container({children: [sc,f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
 		get_value: @(){ Color:srgb(f[1].value(), f[2].value(), f[3].value()) }
 		set_value: @(v){ if Color:is_srgb(v) { discard(seq([@(){[ f[1].set_value(v.red), f[2].set_value(v.green), f[3].set_value(v.blue) ]}, update_sample])) } }
 	}
@@ -297,7 +297,7 @@
 	{
 		form: Ui:C:container({children: [f[1].ui,f[2].ui,f[3].ui,Ui:C:container({children: [Ui:C:text({text: tr().sample()}),f[0].ui]})]})
 		get_value: @(){ Color:ycbcr(f[1].value(), f[2].value(), f[3].value()) }
-		set_value: @(v){ if Color:is_ycbcr(v) {  discard(seq([@(){[ f[1].set_value(v.illuminance), f[2].set_value(v.cb), f[3].set_value(v.cr) ]}, update_sample])) } }
+		set_value: @(v){ if Color:is_ycbcr(v) { discard(seq([@(){[ f[1].set_value(v.illuminance), f[2].set_value(v.cb), f[3].set_value(v.cr) ]}, update_sample])) } }
 	}
 }
 @xyyinput(iv) {
