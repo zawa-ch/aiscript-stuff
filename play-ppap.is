@@ -1,0 +1,37 @@
+/// @ 0.17.0
+### {
+	name: 'アッポーペンチャレンジ'
+	author: 'zawa-ch.'
+	description: '一日一回、PPAP'
+	version: '1.0.0'
+	license: {
+		name: "MIT License"
+		href: "http://www.opensource.org/licenses/mit-license.php"
+	}
+}
+
+@PPAP() {
+	@get_items() {[ "ペン", "アッポー", "パイナッポー", "パイ" ]}
+	@result_ctor(seed) {
+		let rng = Math:gen_rng(seed)
+		var a = Core:range(0,rng(1,5)).map(@(i){get_items()})
+		for let i = 0, a.len-1 { a[i] = a[i][rng(0,a[i].len-1)] }
+		a.join()
+	}
+	result_ctor
+}
+
+@__main() {
+	let hashtag = '#一日一回PPAP'
+	let date = Date:now()
+	let pen = PPAP()
+	let result = pen(`{USER_USERNAME}:{Date:year(date)}:{Date:month(date)}:{Date:day(date)}`)
+	Ui:render([
+		Ui:C:mfm({ text: result }),
+		Ui:C:container({ align: 'center', children: [
+			Ui:C:postFormButton({ text: 'PPAP!', primary: true, form: { text: `{result}{Str:lf}{hashtag}{Str:lf}{THIS_URL}` } })
+		] })
+	])
+	null
+}
+__main()
