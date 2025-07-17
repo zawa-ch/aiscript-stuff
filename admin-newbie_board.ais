@@ -1,0 +1,110 @@
+/// @ 1.0.0
+### {
+	name: 'Newbie board'
+	version: 'beta-1.0'
+	author: 'zawa-ch.<@stellar_ch@geoplanetary.net>'
+	description: '新規ユーザーを自動でリストアップするAiScript App'
+}
+
+:: exception {
+@expect_type(o, t) { if Core:type(o) != t { return Error:create('unexpect_type', {message: `Expect {t}, but got {Core:type(o)}.`}) } }
+@error_stringify(e) {
+	if Core:type(e) != 'error' { return error_stringify(Error:create('unexpect_type', {message: `Expect error, but got {Core:type(e)}.`})) }
+	[e.name].concat(eval {
+		match Core:type(e.info) {
+			'null' => []
+			'str' => [': ', e.info]
+			'error' => [Str:lf, '<- ', error_stringify(e.info)]
+			'obj' => [].concat(if Core:type(e.info.message) == 'str' {[': ', e.info.message]} else {[]}).concat(if Core:type(e.info.e) == 'error' {[Str:lf, '<- ', error_stringify(e.info)]} else {[]})
+			* => [': ', Core:to_str(e.info)]
+		}
+	}).join('')
+}
+}
+
+:: newbieboard {
+@component(props) {
+	var duration = if Obj:has(props, 'duration') && Core:type(props.duration) == 'num' { props.duration } else { 604800000 }
+	var origin = if Obj:has(props, 'origin') && Core:type(props.origin) == 'str' { props.origin } else { 'local' }
+	@fetch_users() {
+		if Core:type(duration) != 'num' { return Error:create('unexpect_type', {message: `Expect num, but got {Core:type(duration)}.`}) }
+		@page(size, offset) { Mk:api('admin/show-users', {limit: size, offset: offset, sort: '+createdAt', state: 'available', origin: origin}) }
+		let d = Date:now()
+		var result = []
+		var i = 0
+		loop {
+			let p = page(50, i)
+			if Core:type(p) == 'error' { return Error:create('unexpect_error', {message: 'Server returned error when fetching users.', e: p}) }
+			if Core:type(p) != 'arr' { return Error:create('unexpect_type', {message: `Expect arr, but got {Core:type(p)}.`}) }
+			if (p.len <= 0) { break }
+			let u = p.filter(@(i){ return (d - Date:parse(i.createdAt)) < duration })
+			if (u.len <= 0) { break }
+			result = result.concat(u)
+			i += 50
+		}
+		result
+	}
+	@users_to_mfm(u) {
+		if Core:type(u) == 'error' { return exception:error_stringify(u) }
+		if Core:type(u) != 'arr' { return exception:error_stringify(Error:create('unexpect_type', {message: `Expect arr, but got {Core:type(u)}.`})) }
+		if (u.len <= 0) { return '<small>List is empty</small>' }
+		u.map(@(i){ [`?[🔘]({SERVER_URL}/admin/user/{i.id}) `, `@{i.username}`, if i.host != 'null' { `@{i.host}` }].join('') }).join(Str:lf)
+	}
+	@make_content() { [`last update: $[unixtime {Math:trunc(Date:now() / 1000)}]`,Str:lf,users_to_mfm(fetch_users())].join('') }
+	let ui = Ui:C:mfm({text: make_content()})
+	let base_update = ui.update
+	Obj:merge(ui, {
+		update: @(new_props) {
+			if Obj:has(new_props, 'duration') { duration = new_props.duration }
+			if Obj:has(new_props, 'origin') { origin = new_props.origin }
+			base_update([if Obj:has(new_props, 'size') { {size: new_props.size} } else { {} }, if Obj:has(new_props, 'bold') { {bold: new_props.bold} } else { {} }, if Obj:has(new_props, 'color') { {color: new_props.color} } else { {} }].reduce(@(b,c){ Obj:merge(b, c) }, {text: make_content()}))
+		},
+		update_content: @() { base_update({text: make_content()}) }
+	})
+}
+}
+
+@preference(props) {
+	var pref = Mk:load('net.geoplanetary.stellar_ch.newbie-board.preference')
+	var value_change_event = if Obj:has(props, 'onValueChanged') && Core:type(props.onValueChanged) == 'fn' { props.onValueChanged } else { null }
+	if Core:type(pref) != 'obj' {
+		pref = {}
+		Obj:set(pref, '@context', 'net.geoplanetary.stellar_ch.newbie-board.preference')
+		Obj:set(pref, 'duration', 604800000)
+		Obj:set(pref, 'origin', 'local')
+		Mk:save('net.geoplanetary.stellar_ch.newbie-board.preference', pref)
+	}
+	let duration_selector = Ui:C:numberInput({ label: 'duration', default: pref.duration, onInput: @(v){
+		pref.duration = v
+		Mk:save('net.geoplanetary.stellar_ch.newbie-board.preference', pref)
+		if Core:type(value_change_event) == 'fn' { value_change_event() }
+	} })
+	let origin_selector = Ui:C:select({ label: 'origin', items: [
+		{ value: 'local', text: 'local' },
+		{ value: 'remote', text: 'remote' },
+		{ value: 'combined', text: 'combined' },
+	], default: pref.origin, onChange: @(v){
+		pref.origin = v
+		Mk:save('net.geoplanetary.stellar_ch.newbie-board.preference', pref)
+		if Core:type(value_change_event) == 'fn' { value_change_event() }
+	} })
+	let ui = Ui:C:folder({title: 'Preference', opened: false, children: [duration_selector, origin_selector]})
+	let base_update = ui.update
+	Obj:merge(ui, {
+		update: @(new_props){
+			if Obj:has(new_props, 'onValueChanged') { value_change_event = new_props.onValueChanged }
+		},
+		preference: @(){ Obj:copy(pref) }
+	})
+}
+
+@__main() {
+	let pref = preference({})
+	let list = newbieboard:component({duration: pref.preference().duration, origin: pref.preference().origin})
+	pref.update({onValueChanged: @(){
+		list.update({duration: pref.preference().duration, origin: pref.preference().origin})
+	}})
+	Ui:render([pref, list])
+	Async:interval(300000, @(){ list.update_content() }, false)
+}
+__main()
