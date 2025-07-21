@@ -1,7 +1,7 @@
 /// @ 1.0.0
 ### {
 	name: 'Newbie board'
-	version: 'beta-1.0'
+	version: 'beta-1.1'
 	author: 'zawa-ch.<@stellar_ch@geoplanetary.net>'
 	description: '新規ユーザーを自動でリストアップするAiScript App'
 }
