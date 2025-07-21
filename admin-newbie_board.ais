@@ -14,8 +14,8 @@
 		match Core:type(e.info) {
 			'null' => []
 			'str' => [': ', e.info]
-			'error' => [Str:lf, '<- ', error_stringify(e.info)]
-			'obj' => [].concat(if Core:type(e.info.message) == 'str' {[': ', e.info.message]} else {[]}).concat(if Core:type(e.info.e) == 'error' {[Str:lf, '<- ', error_stringify(e.info)]} else {[]})
+			'error' => [Str:lf, '<- ', error_stringify(e.info.e)]
+			'obj' => [].concat(if Core:type(e.info.message) == 'str' {[': ', e.info.message]} else {[]}).concat(if Core:type(e.info.e) == 'error' {[Str:lf, '<- ', error_stringify(e.info.e)]} else {[]})
 			* => [': ', Core:to_str(e.info)]
 		}
 	}).join('')
