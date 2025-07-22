@@ -2,7 +2,7 @@
 ### {
 	name: "本日のおすすめ 〜GdbG楽曲編〜"
 	author: "zawa-ch."
-	version: "1.0.0"
+	version: "1.0.1"
 	description: "今日あなたにおすすめのGdbG楽曲はこちら"
 	license: {
 		name: "Apache-2.0 License"
@@ -11,6 +11,13 @@
 }
 //	## 概要
 //	このPlayは、[Groundbreaking](https://gdbg.tv/)に収録された楽曲から1曲を選ぶPlayです。
+//
+//	## 更新履歴
+//	### 1.0
+//	- 1.0.1
+//	  seed値の計算が間違っていたのを修正
+//	- 1.0.0
+//	  最初の版
 
 :: Exception {
 @expect_type(o, t) { if Core:type(o) != t { return Error:create('unexpect_type', {message: `Expect {t}, but got {Core:type(o)}.`}) } }
@@ -85,11 +92,11 @@
 	let i_dataset = dataset.copy()
 	@datecode(date) { Math:trunc((date + Date:parse('1970-01-01T00:00:00Z') - Date:parse('1970-01-01 00:00:00')) / 86400000) }
 	let d = datecode(Date:now())
-	@seed(name, date) { [name, '.', datecode(date)].join('') }
+	@seed(name) { [name, '.', Core:to_str(d)].join('') }
 	{
 		data: @() { i_dataset },
 		draw: @(name) {
-			let rnd = Math:gen_rng(seed(name, d))
+			let rnd = Math:gen_rng(seed(name))
 			i_dataset[rnd(0, i_dataset.len) % i_dataset.len]
 		}
 	}
