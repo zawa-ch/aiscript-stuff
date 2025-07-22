@@ -1,0 +1,160 @@
+/// @ 0.19.0
+### {
+	name: "本日のおすすめ 〜GdbG楽曲編〜"
+	author: "zawa-ch."
+	version: "1.0.0"
+	description: "今日あなたにおすすめのGdbG楽曲はこちら"
+	license: {
+		name: "Apache-2.0 License"
+		href: "https://www.apache.org/licenses/LICENSE-2.0"
+	}
+}
+//	## 概要
+//	このPlayは、[Groundbreaking](https://gdbg.tv/)に収録された楽曲から1曲を選ぶPlayです。
+
+:: Exception {
+@expect_type(o, t) { if Core:type(o) != t { return Error:create('unexpect_type', {message: `Expect {t}, but got {Core:type(o)}.`}) } }
+@error_stringify(e) {
+	if Core:type(e) != 'error' { return error_stringify(Error:create('unexpect_type', {message: `Expect error, but got {Core:type(e)}.`})) }
+	[e.name].concat(eval {
+		match Core:type(e.info) {
+			'null' => []
+			'str' => [': ', e.info]
+			'error' => [Str:lf, '<- ', error_stringify(e.info)]
+			'obj' => [].concat(if Core:type(e.info.message) == 'str' {[': ', e.info.message]} else {[]}).concat(if Core:type(e.info.e) == 'error' {[Str:lf, '<- ', error_stringify(e.info.e)]} else {[]})
+			* => [': ', Core:to_str(e.info)]
+		}
+	}).join('')
+}
+}
+
+:: DatasetLoader {
+@load(pageidList) {
+	if Core:type(pageidList) != 'arr' { return Error:create('datasetloader.invalidargument',{argname: 'pageidList', expectedtype: 'arr', actualtype: Core:type(pageidList)}) }
+	pageidList.map(@(i){
+		let page = Mk:api("pages/show", {pageId: i})
+		if Core:type(page) == 'error' { return Error:create('datasetloader.apierror',{pageId: i, inner_error: {name: page.name, info: page.info}}) }
+		let json = Json:parse(page.content[0].text)
+		if Core:type(json) != 'error' { json } else { Error:create('datasetloader.jsonerror',{pageId: i, inner_error: {name: json.name, info: json.info}}) }
+	}).reduce(@(b,c,i){if Core:type(b)=='arr' { if Core:type(c)=='arr' {b.concat(c)} else {c}} else {b}},[])
+}
+}
+
+:: GdbgRand {
+@dataset_refs() {[
+	//	ここにデータセットの page id を列挙します
+]}
+@i18n() {{
+	dataset_fetching: @(){ 'データセット読み込み中、これには時間がかかることがあります。' }
+	dataset_fetch_error: @(){ 'データセットの読み込みに失敗しました。Playを再読込みしてください。' }
+	performing_lottry: @(){ 'データセット読み込み完了、抽選中' }
+	recomend_song_is: @(user){ `{user} に本日おすすめの曲はこちら` }
+	complete_percentage: @(){ '現在のコンプリート率' }
+	post: @(){ '投稿する' }
+	execute: @(){ '実行' }
+	turn_on_to_execute: @(){ '実行するにはスイッチを入れる' }
+	erase_saves: @(){ '進捗のリセット' }
+	erase_complete: @(){ 'リセットが完了しました。' }
+	confirm_erase_title: @(){ '進捗をリセットします' }
+	confirm_erase_message: @(){ ['収集した楽曲をリセットし、コンプリート率0%からのやり直しを行います。', '**操作の取り消しはできません**。'].join(Str:lf) }
+	induce_message: @(url){ `▶ ?[本日のおすすめ 〜GdbG楽曲編〜]({url})` }
+}}
+@dataset() { DatasetLoader:load(dataset_refs()) }
+@saves() {
+	let context = 'net.geoplanetary.stellar_ch.gdbgrand.saves'
+	var data = Mk:load(context)
+	@renew() {
+		data = {inventory: []}
+		Obj:set(data, '@context', context)
+	}
+	@is_new_item(item) { !data.inventory.incl(item) }
+	@commit(pred) {
+		pred()
+		Mk:save(context, data)
+	}
+	if Core:type(data) != 'obj' || !Obj:has(data, '@context') || (Obj:get(data, '@context') != context) { renew() }
+	{
+		erase: @() { commit(@(){ renew() }) },
+		data: @(){ Obj:copy(data) },
+		is_new: is_new_item
+		insert_inventory: @(item) { if is_new_item(item) { commit(@(){ data.inventory.push(item) }) } },
+		get_complete_percentiles: @(dataset) { dataset.filter(@(i){ data.inventory.incl(i.id) }).len / dataset.len }
+	}
+}
+@deck(dataset) {
+	let i_dataset = dataset.copy()
+	@datecode(date) { Math:trunc((date + Date:parse('1970-01-01T00:00:00Z') - Date:parse('1970-01-01 00:00:00')) / 86400000) }
+	let d = datecode(Date:now())
+	@seed(name, date) { [name, '.', datecode(date)].join('') }
+	{
+		data: @() { i_dataset },
+		draw: @(name) {
+			let rnd = Math:gen_rng(seed(name, d))
+			i_dataset[rnd(0, i_dataset.len) % i_dataset.len]
+		}
+	}
+}
+@component() {
+	var savedata = saves()
+	var deck = null
+	var result = null
+	let txtarea = Ui:C:mfm({})
+	let postbutton = Ui:C:postFormButton({text: i18n().post(), primary: true})
+	let postcontainer = Ui:C:container({borderWidth: 0, padding: 0, rounded: false, hidden: true, children: [postbutton]})
+	let eraseswitch = eval {
+		let b = Ui:C:button({text: i18n().execute(), primary: false, rounded: false, disabled: true, onClick: @() {
+			if !Mk:confirm(i18n().confirm_erase_title(), i18n().confirm_erase_message(), 'warning') { return null }
+			savedata.erase()
+			txtarea.update({text: i18n().erase_complete()})
+			postcontainer.update({hidden: true})
+			eraseswitch.update({hidden: true})
+		}})
+		let s = Ui:C:switch({default: false, label: i18n().turn_on_to_execute(), onChange: @(v) { b.update({disabled: !v}) }})
+		Ui:C:container({borderWidth: 0, padding: 0, rounded: false, hidden: false, children: [Ui:C:folder({title: i18n().erase_saves(), opened: false, children: [s, b]})]})
+	}
+	@prepare() {
+		if deck != null { return null }
+		let dataset = dataset()
+		if Core:type(dataset) == 'error' { return Error:create('dataset_fetch_error', {message: 'Error occoured when fetching dataset', e: dataset}) }
+		if Core:type(dataset) != 'arr' { return Error:create('dataset_invalid_type', {message: `Expect arr, but got {Core:type(dataset)}`}) }
+		deck = GdbgRand:deck(dataset)
+	}
+	@lottery() {
+		txtarea.update({text: i18n().dataset_fetching()})
+		let p = prepare()
+		if Core:type(p) == 'error' {
+			txtarea.update({text: [i18n().dataset_fetch_error(), Str:lf, 'exception: ', Exception:error_stringify(p)].join('')})
+			return p
+		}
+		txtarea.update({text: i18n().performing_lottry()})
+		let r = deck.draw(USER_USERNAME)
+		let n = savedata.is_new(r.id)
+		savedata.insert_inventory(r.id)
+		let c = savedata.get_complete_percentiles(deck.data())
+		result = { item: r, is_new: n, comp: c, text: [
+			i18n().recomend_song_is(USER_NAME), Str:lf,
+			'$[tada.speed=0s <plain>', r.title, '</plain>]', if r.subtitle != null { ` <plain>{r.subtitle}</plain>` } else { '' }, Str:lf,
+			'<plain>', r.artist, '</plain>', Str:lf,
+			'<small>from ?[<plain>', r.album, '</plain>](', r.url, ')</small>', Str:lf, Str:lf
+			i18n().complete_percentage(), ": ", Core:to_str(Math:round(c * 10000) / 100), " %"
+		].join('')}
+		txtarea.update({text: result.text})
+		postbutton.update({form: {text: `{result.text}{Str:lf}{i18n().induce_message(THIS_URL)}`}})
+		postcontainer.update({hidden: false})
+	}
+	let ui = Ui:C:container({children: [txtarea, postcontainer, eraseswitch]})
+	let base_update = ui.update
+	Obj:merge(ui, {
+		update: @(new_props) {},
+		lottery: lottery,
+		result: @() { result }
+	})
+}
+}
+
+@__main() {
+	let c = GdbgRand:component()
+	Ui:render([c])
+	c.lottery()
+}
+__main()
